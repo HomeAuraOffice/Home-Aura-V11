@@ -36,7 +36,9 @@ function doGet(e) {
       factories: sheetToObjects("factories"),
       factoryBills: sheetToObjects("factoryBills"),
       expenses: sheetToObjects("expenses"),
-      settings: sheetToObjects("settings")
+      settings: sheetToObjects("settings"),
+      tasks: sheetToObjects("tasks"),
+      notifications: sheetToObjects("notifications")
     };
 
     return ContentService.createTextOutput(JSON.stringify(data))
@@ -88,7 +90,7 @@ function doPost(e) {
 
     // 2. Google Drive image upload handler
     if (payloadObj.action === 'upload_image' && payloadObj.base64) {
-      var uploadResult = handleDriveImageUpload(payloadObj.filename || 'attachment.jpg', payloadObj.base64);
+      var uploadResult = handleDriveImageUpload(payloadObj.filename || 'attachment.jpg', payloadObj.base64, payloadObj.folder);
       return ContentService.createTextOutput(JSON.stringify(uploadResult))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -121,6 +123,12 @@ function doPost(e) {
       }
       if (changes.settings && changes.settings.length) {
         stats.updatedRecords += mergeObjectsByIdLWW("settings", changes.settings);
+      }
+      if (changes.tasks && changes.tasks.length) {
+        stats.updatedRecords += mergeObjectsByIdLWW("tasks", changes.tasks);
+      }
+      if (changes.notifications && changes.notifications.length) {
+        stats.updatedRecords += mergeObjectsByIdLWW("notifications", changes.notifications);
       }
 
       // Process categories if updated
@@ -158,6 +166,8 @@ function doPost(e) {
     if (payloadObj.factoryBills) stats.updatedRecords += mergeObjectsByIdLWW("factoryBills", payloadObj.factoryBills);
     if (payloadObj.expenses) stats.updatedRecords += mergeObjectsByIdLWW("expenses", payloadObj.expenses);
     if (payloadObj.settings) stats.updatedRecords += mergeObjectsByIdLWW("settings", payloadObj.settings);
+    if (payloadObj.tasks) stats.updatedRecords += mergeObjectsByIdLWW("tasks", payloadObj.tasks);
+    if (payloadObj.notifications) stats.updatedRecords += mergeObjectsByIdLWW("notifications", payloadObj.notifications);
 
     if (payloadObj.pendingDeletes) {
       Object.keys(payloadObj.pendingDeletes).forEach(function(sheetName) {
@@ -374,7 +384,7 @@ function objectsToSheetAtomic(sheetName, objects) {
 /**
  * Saves uploaded images (base64) to Google Drive and returns direct URL
  */
-function handleDriveImageUpload(filename, base64Data) {
+function handleDriveImageUpload(filename, base64Data, customFolder) {
   try {
     var cleanBase64 = base64Data;
     var contentType = "image/jpeg";
@@ -389,7 +399,7 @@ function handleDriveImageUpload(filename, base64Data) {
     var decodedBlob = Utilities.newBlob(Utilities.base64Decode(cleanBase64), contentType, filename);
 
     // Create or locate HomeAura folder
-    var folderName = "HomeAura_Order_Attachments";
+    var folderName = customFolder || "HomeAura_Order_Attachments";
     var folders = DriveApp.getFoldersByName(folderName);
     var targetFolder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
 

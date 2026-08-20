@@ -43,8 +43,86 @@
         const factories = ref([]);
         const factoryBills = ref([]);
         const expenses = ref([]);
+        const tasks = ref([]);
+        const notifications = ref([]);
         const currentUser = ref(null);
+        const isUserOnline = (timeStr) => {
+          if (!timeStr) return false;
+          return (Date.now() - new Date(timeStr).getTime()) < 5 * 60000;
+        };
+        
+        const newTask = reactive({ title: '', description: '', assigneeRole: 'all', assigneeId: '' });
+        
+        const markTaskDone = (task) => {
+          task.status = 'completed';
+          syncQueue.value.changes.tasks = syncQueue.value.changes.tasks || {};
+          syncQueue.value.changes.tasks[task.id] = true;
+          saveSyncQueue();
+        };
+
+        const createNewTask = () => {
+          if (!newTask.title) return;
+          const taskId = 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+          tasks.value.unshift({
+            id: taskId,
+            title: newTask.title,
+            description: newTask.description,
+            status: 'pending',
+            assigneeRole: newTask.assigneeRole,
+            assigneeId: newTask.assigneeId,
+            createdAt: new Date().toISOString()
+          });
+          syncQueue.value.changes.tasks = syncQueue.value.changes.tasks || {};
+          syncQueue.value.changes.tasks[taskId] = true;
+          saveSyncQueue();
+          newTask.title = '';
+          newTask.description = '';
+        };
+
         const activeTab = ref('dashboard');
+
+        const isTasksPanelOpen = ref(false);
+        const unreadNotificationsCount = computed(() => {
+          if (!currentUser.value) return 0;
+          return tasks.value.filter(t => t.status === 'pending' && (t.assigneeId === currentUser.value.id || t.assigneeRole === currentUser.value.role || t.assigneeRole === 'all')).length;
+        });
+
+        // Automated Task Generator
+        setInterval(() => {
+          if (currentUser.value?.role !== 'admin' && currentUser.value?.role !== 'moderator') return;
+          const now = Date.now();
+          const twoHours = 2 * 60 * 60 * 1000;
+          let changed = false;
+          orders.value.forEach(order => {
+            if (order.status === 'Pending' && order.createdAt) {
+              const orderTime = new Date(order.createdAt).getTime();
+              if (now - orderTime > twoHours) {
+                 const taskId = 'auto_pending_' + order.id;
+                 const existing = tasks.value.find(t => t.id === taskId);
+                 if (!existing) {
+                    tasks.value.push({
+                       id: taskId,
+                       title: 'Overdue Pending Order: ' + (order.orderId || order.id),
+                       description: 'Order for ' + order.customerName + ' has been pending for over 2 hours.',
+                       status: 'pending',
+                       assigneeRole: 'seller',
+                       assigneeId: order.merchantId,
+                       orderId: order.id,
+                       createdAt: new Date().toISOString()
+                    });
+                    syncQueue.value.changes.tasks = syncQueue.value.changes.tasks || {};
+                    syncQueue.value.changes.tasks[taskId] = true;
+                    changed = true;
+                 }
+              }
+            }
+          });
+          if (changed) {
+            localStorage.setItem('homeaura_tasks', JSON.stringify(tasks.value));
+            saveSyncQueue();
+          }
+        }, 60000);
+
 
         // WhatsApp Submission Group Default Link
         const DEFAULT_WA_GROUP_LINK = 'https://chat.whatsapp.com/LStonFBgIe67wTqWx9f1dw';
@@ -52,6 +130,7 @@
 
         // Apps Script Endpoint URL
         const appsScriptUrl = ref(localStorage.getItem('homeaura_apps_script_url') || 'https://script.google.com/macros/s/AKfycbzLixNthxgqReboKXMfkLJSAz1baSXPw69ed9Lf2WxJBKtCrUzeOUzqawMf_tbn-da74Q/exec');
+        const backupFrequency = ref(localStorage.getItem('homeaura_backup_frequency') || '6');
         let initialStoredWa = localStorage.getItem('homeaura_admin_wa');
         if (initialStoredWa && initialStoredWa.includes('HomeAuraOfficialTeam')) {
             initialStoredWa = DEFAULT_WA_GROUP_LINK; // Force overwrite bad legacy link
@@ -160,7 +239,8 @@
               users: [],
               factories: [],
               factoryBills: [],
-              expenses: []
+              expenses: [],
+              tasks: []
             }
           };
         };
@@ -270,7 +350,15 @@
           }
         };
 
-        const pushToGoogleSheets = async (forceFull = false) => {
+        const pushToGoogleSheets = async (forceFull = false, isUserTriggered = false) => {
+          if (currentUser.value) {
+            const myU = users.value.find(u => u && u.username === currentUser.value.username);
+            if (myU) {
+              myU.lastActive = new Date().toISOString();
+              syncQueue.value.changes.users = syncQueue.value.changes.users || {};
+              syncQueue.value.changes.users[myU.id] = true;
+            }
+          }
           if (!appsScriptUrl.value) return;
           if (!navigator.onLine) {
             syncStatus.value = 'offline';
@@ -518,7 +606,7 @@
                 if (!remoteU || !remoteU.username) return;
                 const uname = String(remoteU.username);
                 processedUsernames.add(uname);
-                const localU = users.value.find(u => String(u.username) === uname);
+                const localU = users.value.find(u => u && String(u.username) === uname);
                 if (localU) {
                   if (!syncQueue.value.changes.users || !syncQueue.value.changes.users[localU.id]) {
                     Object.assign(localU, remoteU);
@@ -653,6 +741,39 @@
             if (Array.isArray(data.categories) && data.categories.length > 0 && !syncQueue.value.changes.categories) {
               categories.value = data.categories.map(c => typeof c === 'object' && c !== null ? (c.name || Object.values(c).join('')) : String(c));
               localStorage.setItem('homeaura_categories', JSON.stringify(categories.value));
+            }
+
+            
+            // 9. Tasks Merge
+            if (Array.isArray(data.tasks)) {
+              const taskMap = new Map();
+              data.tasks.forEach(t => { if (t && t.id) taskMap.set(String(t.id), t); });
+              const newTasksList = [];
+              const processedTaskIds = new Set();
+              data.tasks.forEach(remoteT => {
+                if (!remoteT || !remoteT.id) return;
+                const tid = String(remoteT.id);
+                processedTaskIds.add(tid);
+                if (syncQueue.value.deletes.tasks && syncQueue.value.deletes.tasks.includes(remoteT.id)) return;
+                const localT = tasks.value.find(t => String(t.id) === tid);
+                if (localT) {
+                  if (!syncQueue.value.changes.tasks || !syncQueue.value.changes.tasks[localT.id]) {
+                    Object.assign(localT, remoteT);
+                  }
+                  newTasksList.push(localT);
+                } else {
+                  newTasksList.push(remoteT);
+                }
+              });
+              tasks.value.forEach(localT => {
+                if (localT && localT.id && !processedTaskIds.has(String(localT.id))) {
+                  if (syncQueue.value.changes.tasks && syncQueue.value.changes.tasks[localT.id]) {
+                    newTasksList.push(localT);
+                  }
+                }
+              });
+              tasks.value = newTasksList;
+              localStorage.setItem('homeaura_tasks', JSON.stringify(tasks.value));
             }
 
             // 8. Settings Merge (WhatsApp Reporting Group, etc.)
@@ -808,10 +929,11 @@
           if (storedSession) {
             try {
               const user = JSON.parse(storedSession);
-              const freshUser = users.value.find(u => u.username === user.username);
+              if (!user || !user.username) throw new Error('Invalid session');
+              const freshUser = users.value.find(u => u && u.username === user.username);
               if (freshUser && freshUser.active) {
                 currentUser.value = freshUser;
-                activeTab.value = freshUser.role === 'admin' ? 'dashboard' : 'intake';
+                activeTab.value = (freshUser.role === 'admin' || freshUser.role === 'marketer' || freshUser.role === 'moderator') ? 'dashboard' : 'intake';
               } else {
                 localStorage.removeItem('homeaura_session');
               }
@@ -820,10 +942,22 @@
         };
 
         const saveOrdersLocally = () => {
-          localStorage.setItem("homeaura_orders", JSON.stringify(orders.value));
+          const stripped = orders.value.map(o => {
+            const copy = { ...o };
+            delete copy.collagePhotoLocalUrl;
+            delete copy.socialProofLocalUrl;
+            return copy;
+          });
+          localStorage.setItem("homeaura_orders", JSON.stringify(stripped));
         };
         const saveDeletedOrdersLocally = () => {
-          localStorage.setItem("homeaura_deleted_orders", JSON.stringify(deletedOrders.value));
+          const stripped = deletedOrders.value.map(o => {
+            const copy = { ...o };
+            delete copy.collagePhotoLocalUrl;
+            delete copy.socialProofLocalUrl;
+            return copy;
+          });
+          localStorage.setItem("homeaura_deleted_orders", JSON.stringify(stripped));
         };
         const saveUsersLocally = () => {
           localStorage.setItem("homeaura_users", JSON.stringify(users.value));
@@ -844,6 +978,9 @@
         // --- MODAL AND VIEW STATE ---
         const selectedProofTile = ref('terminal');
         const selectProofTile = (tileKey) => { selectedProofTile.value = tileKey; };
+        
+        const selectedCollageTile = ref('terminal');
+        const selectCollageTile = (tileKey) => { selectedCollageTile.value = tileKey; };
 
         const loginForm = reactive({ username: '', password: '' });
         const loginError = ref('');
@@ -865,7 +1002,7 @@
           customerPhone: '',
           customerAddress: '',
           trafficSource: 'Messenger',
-          designCode: '',
+          fabric: '',
           productCategory: 'L-Shape Sofa',
           seatConfig: '3-Seater',
           fulfillmentMethod: 'Home Delivery',
@@ -1021,87 +1158,209 @@
         };
 
         // --- IMAGE ATTACHMENT HANDLERS ---
-        const handleCollageFileUpload = (event, targetObj = intakeForm) => {
-          const file = event.target.files && event.target.files[0];
-          if (!file) return;
 
-          const sellerUsername = currentUser.value ? currentUser.value.username : 'seller';
-          const rawCn = targetObj.cnNumber || 'NOCN';
-          const rawInv = targetObj.invoiceNumber || 'NOINV';
-          const cleanCn = rawCn.replace(/[^a-zA-Z0-9-]/g, '');
-          const cleanInv = rawInv.replace(/[^a-zA-Z0-9-]/g, '');
-          const dateStr = targetObj.timestamp ? targetObj.timestamp.slice(0, 10) : new Date().toISOString().slice(0, 10);
-          const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-
-          const fileName = `${sellerUsername}_${cleanCn}_${cleanInv}_${dateStr}.${ext}`;
-          const relativePath = `collage_attachments/${fileName}`;
-
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            targetObj.collagePhotoUrl = e.target.result;
-            targetObj.collagePhotoFileName = relativePath;
-          };
-          reader.readAsDataURL(file);
+        const convertFileToPngBase64 = (file) => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const img = new Image();
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+              };
+              img.onerror = reject;
+              img.src = e.target.result;
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
         };
 
-        const processProofFile = (file, targetObj = intakeForm) => {
+        const processCollageFile = async (file, targetObj = intakeForm) => {
           if (!file || !file.type.startsWith('image/')) return;
           const sellerUsername = currentUser.value ? currentUser.value.username : 'seller';
           const rawCn = targetObj.cnNumber || 'NOCN';
           const cleanCn = rawCn.replace(/[^a-zA-Z0-9-]/g, '');
           const dateStr = targetObj.timestamp ? targetObj.timestamp.slice(0, 10) : new Date().toISOString().slice(0, 10);
-          const ext = (file.name ? file.name.split('.').pop() : 'png').toLowerCase();
-          const fileName = `proof_${sellerUsername}_${cleanCn}_${dateStr}.${ext}`;
-          
+          const fileName = `collage_${sellerUsername}_${cleanCn}_${dateStr}.png`;
+
           if (targetObj === intakeForm) {
-            parseSuccessMsg.value = '⏳ Uploading screenshot to Google Drive... Please wait.';
+            parseSuccessMsg.value = '⏳ Converting and uploading collage to Google Drive... Please wait.';
+          }
+          
+          targetObj.collagePhotoLocalUrl = URL.createObjectURL(file);
+          targetObj.collagePhotoUrl = '';
+          targetObj.collagePhotoFileName = fileName;
+
+          if (!appsScriptUrl.value) {
+            if (targetObj === intakeForm) parseSuccessMsg.value = '⚠️ Collage attached locally (No Google Script URL set).';
+            return;
           }
 
-          const reader = new FileReader();
-          reader.onload = async (e) => {
-            const base64Data = e.target.result;
-            targetObj.socialProofUrl = base64Data;
-            
-            if (!appsScriptUrl.value) {
-              if (targetObj === intakeForm) parseSuccessMsg.value = '⚠️ Proof attached locally (No Google Script URL set).';
-              return;
-            }
-
-            try {
-              const url = (appsScriptUrl.value || '').trim();
-              if (!url || !url.startsWith('http')) return;
-
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-              const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({
-                  action: 'upload_image',
-                  filename: fileName,
-                  base64: base64Data
-                }),
-                signal: controller.signal
-              });
-              clearTimeout(timeoutId);
-
-              const result = await res.json();
-              if (result.status === 'success' && result.url) {
-                targetObj.socialProofUrl = result.url;
+          try {
+            const base64Data = await convertFileToPngBase64(file);
+            const url = (appsScriptUrl.value || '').trim();
+            if (!url || !url.startsWith('http')) return;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+            const res = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({
+                action: 'upload_image',
+                filename: fileName,
+                base64: base64Data,
+                folder: 'HomeAura_Collage_Photos'
+              }),
+              signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            const result = await res.json();
+                          if (result.status === 'success' && result.url) {
+                targetObj.collagePhotoUrl = result.url;
                 if (targetObj === intakeForm) {
-                  parseSuccessMsg.value = '✅ Screenshot securely uploaded to Google Drive!';
+                  parseSuccessMsg.value = '✅ Collage converted and securely uploaded to Google Drive!';
                   setTimeout(() => { parseSuccessMsg.value = ''; }, 4000);
                 }
                 if (targetObj.id) {
-                  queueChange('orders', targetObj);
+                  const realOrder = orders.value.find(o => o.id === targetObj.id);
+                  if (realOrder) {
+                    realOrder.collagePhotoUrl = result.url;
+                    realOrder.collagePhotoFileName = fileName;
+                    queueChange('orders', realOrder);
+                    saveOrdersLocally();
+                  }
                 }
               }
-            } catch(err) {
-              console.warn("Upload Notice (saved locally):", err.message);
+          } catch (err) {
+            console.error('Collage Upload Error:', err);
+            if (targetObj === intakeForm) parseSuccessMsg.value = '❌ Failed to upload collage. Using local preview instead.';
+          }
+        };
+
+        const handleCollageFileUpload = (event, targetObj = intakeForm) => {
+          const file = event.target.files && event.target.files[0];
+          if (!file) return;
+          processCollageFile(file, targetObj);
+        };
+        
+        const handleCollagePaste = (event, targetObj = intakeForm) => {
+          const clipboardData = event.clipboardData || (event.originalEvent && event.originalEvent.clipboardData);
+          if (!clipboardData || !clipboardData.items) return;
+          const items = clipboardData.items;
+          for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+              const blob = items[i].getAsFile();
+              if (blob) {
+                processCollageFile(blob, targetObj);
+                event.preventDefault();
+                break;
+              }
             }
-          };
-          reader.readAsDataURL(file);
+          }
+        };
+
+
+        const handleCollageDrop = (event, targetObj = intakeForm) => {
+          event.preventDefault();
+          if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
+            processCollageFile(event.dataTransfer.files[0], targetObj);
+          }
+        };
+
+        const processProofFile = async (file, targetObj = intakeForm) => {
+          if (!file || !file.type.startsWith('image/')) return;
+          const sellerUsername = currentUser.value ? currentUser.value.username : 'seller';
+          const rawCn = targetObj.cnNumber || 'NOCN';
+          const cleanCn = rawCn.replace(/[^a-zA-Z0-9-]/g, '');
+          const dateStr = targetObj.timestamp ? targetObj.timestamp.slice(0, 10) : new Date().toISOString().slice(0, 10);
+          const fileName = `proof_${sellerUsername}_${cleanCn}_${dateStr}.png`;
+
+          if (targetObj === intakeForm) {
+            parseSuccessMsg.value = '⏳ Converting and uploading screenshot to Google Drive... Please wait.';
+          }
+          
+          targetObj.socialProofLocalUrl = URL.createObjectURL(file);
+          targetObj.socialProofUrl = '';
+          targetObj.socialProofFileName = fileName;
+
+          if (!appsScriptUrl.value) {
+            if (targetObj === intakeForm) parseSuccessMsg.value = '⚠️ Proof attached locally (No Google Script URL set).';
+            return;
+          }
+
+          try {
+            const base64Data = await convertFileToPngBase64(file);
+            const url = (appsScriptUrl.value || '').trim();
+            if (!url || !url.startsWith('http')) return;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+            const res = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({
+                action: 'upload_image',
+                filename: fileName,
+                base64: base64Data,
+                folder: 'HomeAura_Screenshot_Proofs'
+              }),
+              signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            const result = await res.json();
+                          if (result.status === 'success' && result.url) {
+                targetObj.socialProofUrl = result.url;
+                if (targetObj === intakeForm) {
+                  parseSuccessMsg.value = '✅ Screenshot converted and securely uploaded to Google Drive!';
+                  setTimeout(() => { parseSuccessMsg.value = ''; }, 4000);
+                }
+                if (targetObj.id) {
+                  const realOrder = orders.value.find(o => o.id === targetObj.id);
+                  if (realOrder) {
+                    realOrder.socialProofUrl = result.url;
+                    realOrder.socialProofFileName = fileName;
+                    queueChange('orders', realOrder);
+                    saveOrdersLocally();
+                  }
+                }
+              }
+          } catch(err) {
+            console.warn("Upload Notice (saved locally):", err.message);
+            if (targetObj === intakeForm) parseSuccessMsg.value = '❌ Failed to upload screenshot. Using local preview instead.';
+          }
+        };
+
+
+        const uploadCompositePngToDrive = async (base64Data, filename) => {
+          const url = (appsScriptUrl.value || '').trim();
+          if (!url || !url.startsWith('http')) return null;
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+            const res = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({
+                action: 'upload_image',
+                filename: filename,
+                base64: base64Data,
+                folder: 'HomeAura_Dispatch_Manifests'
+              }),
+              signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            const result = await res.json();
+            if (result.status === 'success' && result.url) {
+              return result.url;
+            }
+          } catch(e) {
+            console.error('Failed to upload composite PNG to drive:', e);
+          }
+          return null;
         };
 
         const handleProofFileUpload = (event, targetObj = intakeForm) => {
@@ -1188,7 +1447,7 @@
         // --- AUTHENTICATION ---
         const handleLogin = () => {
           loginError.value = '';
-          const user = users.value.find(u => String(u.username) === String(loginForm.username) && String(u.password) === String(loginForm.password));
+          const user = users.value.find(u => u && String(u.username) === String(loginForm.username) && String(u.password) === String(loginForm.password));
           if (!user) {
             loginError.value = 'Invalid username or password.';
             return;
@@ -1199,7 +1458,7 @@
           }
           currentUser.value = user;
           localStorage.setItem('homeaura_session', JSON.stringify(user));
-          activeTab.value = user.role === 'admin' ? 'dashboard' : 'intake';
+          activeTab.value = (user.role === 'admin' || user.role === 'marketer' || user.role === 'moderator') ? 'dashboard' : 'intake';
           loginForm.username = '';
           loginForm.password = '';
         };
@@ -1210,24 +1469,117 @@
         };
 
         // --- COMPUTED METRICS ---
+        
+        const dashboardFilter = reactive({
+          dateRange: 'all',
+          sellerId: 'all'
+        });
+
+                const filterOrdersForDashboard = (orderList) => {
+          return orderList.filter(o => {
+            // Apply seller filter
+            if (dashboardFilter.sellerId !== 'all') {
+              if (o.merchantId !== dashboardFilter.sellerId) return false;
+            } else {
+              // Exclude isolated users when viewing 'all'
+              const seller = users.value.find(u => u.id === o.merchantId);
+              if (seller && seller.excludeFromGlobalAnalytics) return false;
+            }
+            
+            // Apply date filter
+            if (dashboardFilter.dateRange !== 'all' && o.createdAt) {
+              const orderDate = new Date(o.createdAt);
+              const now = new Date();
+              if (dashboardFilter.dateRange === 'today') {
+                if (orderDate.toDateString() !== now.toDateString()) return false;
+              } else if (dashboardFilter.dateRange === 'week') {
+                const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                if (orderDate < oneWeekAgo) return false;
+              } else if (dashboardFilter.dateRange === 'month') {
+                if (orderDate.getMonth() !== now.getMonth() || orderDate.getFullYear() !== now.getFullYear()) return false;
+              }
+            }
+            return true;
+          });
+        };
+
         const metrics = computed(() => {
-          const grossRevenue = orders.value.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
-          const deliveredProductsRevenue = orders.value.filter(o => o.status === 'Delivered' || o.status === 'Partial Delivered').reduce((acc, o) => acc + (o.saleAmount || 0), 0);
-          const deliveredCount = orders.value.filter(o => o.status === 'Delivered').length;
-          const pendingCount = orders.value.filter(o => o.status !== 'Delivered' && o.status !== 'Returned Received').length;
-          const urgentCount = orders.value.filter(o => o.urgent).length;
+          const filteredOrders = filterOrdersForDashboard(orders.value);
+          const grossRevenue = filteredOrders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
+          const deliveredProductsRevenue = filteredOrders.filter(o => o.status === 'Delivered' || o.status === 'Partial Delivered').reduce((acc, o) => acc + (o.saleAmount || 0), 0);
+          const deliveredCount = filteredOrders.filter(o => o.status === 'Delivered').length;
+          const pendingCount = filteredOrders.filter(o => o.status !== 'Delivered' && o.status !== 'Returned Received').length;
+          const urgentCount = filteredOrders.filter(o => o.urgent).length;
           return { grossRevenue, deliveredProductsRevenue, deliveredCount, pendingCount, urgentCount };
         });
 
-        const sellersList = computed(() => users.value.filter(u => u.role === 'seller'));
+        const sellersList = computed(() => users.value.filter(u => u && (u.role === 'seller' || u.role === 'moderator')));
         const dispatchDeskOrders = computed(() => {
           return orders.value.filter(o => o.status !== 'Delivered' && o.status !== 'Returned Received').sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
         });
 
-        const merchantStats = computed(() => {
-          return sellersList.value.map(seller => {
-            const sellerOrders = orders.value.filter(o => o.merchantName === seller.name || o.merchantId === seller.id);
-            const totalSales = sellerOrders.reduce((acc, o) => acc + (o.saleAmount || 0), 0);
+        
+        const estimateSteadfastCharge = (order) => {
+          let weight = 2; // Default for sofa covers
+          const cat = (order.productCategory || '').toLowerCase();
+          if (cat.includes('sofa') && !cat.includes('cover')) weight = 50;
+          else if (cat.includes('bed')) weight = 80;
+          else if (cat.includes('dining')) weight = 60;
+          else if (cat.includes('wardrobe') || cat.includes('almirah')) weight = 70;
+          
+          const addr = (order.customerAddress || '').toLowerCase();
+          let base = 130;
+          let perKg = 20;
+          if (addr.includes('dhaka') && !addr.includes('outside')) {
+            if (addr.includes('savar') || addr.includes('gazipur') || addr.includes('keraniganj') || addr.includes('narayanganj')) {
+              base = 100;
+              perKg = 15;
+            } else {
+              base = 70;
+              perKg = 10;
+            }
+          }
+          
+          return base + (weight - 1) * perKg;
+        };
+
+        const steadfastReport = computed(() => {
+          let totalSales = 0;
+          let totalDeliveryCollected = 0;
+          let totalSteadfastCharge = 0;
+          
+          const filteredOrders = filterOrdersForDashboard(orders.value);
+          const relevantOrders = filteredOrders.filter(o => o.status !== 'Void' && o.status !== 'Returned Received');
+          
+          relevantOrders.forEach(o => {
+            totalSales += (Number(o.saleAmount) || 0);
+            totalDeliveryCollected += (Number(o.deliveryCharge) || 0);
+            totalSteadfastCharge += estimateSteadfastCharge(o);
+          });
+          
+          return {
+            totalSales,
+            totalDeliveryCollected,
+            totalSteadfastCharge,
+            profitOnDelivery: totalDeliveryCollected - totalSteadfastCharge
+          };
+        });
+
+                const merchantStats = computed(() => {
+          let visibleSellersList = sellersList.value;
+          if (currentUser.value?.role === 'marketer' && currentUser.value?.visibleSellers) {
+              visibleSellersList = sellersList.value.filter(s => currentUser.value.visibleSellers.includes(s.id));
+          }
+          // Also apply the dashboard filter for specific user, if active
+          if (dashboardFilter.sellerId !== 'all') {
+             visibleSellersList = visibleSellersList.filter(s => s.id === dashboardFilter.sellerId);
+          } else {
+             visibleSellersList = visibleSellersList.filter(s => !s.excludeFromGlobalAnalytics);
+          }
+          const filteredOrders = filterOrdersForDashboard(orders.value);
+          return visibleSellersList.map(seller => {
+            const sellerOrders = filteredOrders.filter(o => o.merchantName === seller.name || o.merchantId === seller.id);
+            const totalSales = sellerOrders.reduce((acc, o) => acc + (Number(o.saleAmount) || 0), 0);
             const target = seller.target || 300000;
             const percentage = target > 0 ? Math.round((totalSales / target) * 100) : 0;
             return {
@@ -1254,12 +1606,63 @@
           return Object.values(stats).sort((a, b) => b.totalAmount - a.totalAmount);
         });
 
-        const totalFactoryBillsAmount = computed(() => {
-          return factoryBills.value.reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+        
+                const totalFactoryBillsAmount = computed(() => {
+          let bills = factoryBills.value;
+          
+          if (dashboardFilter.sellerId !== 'all') {
+            bills = bills.filter(b => b.sellerId === dashboardFilter.sellerId);
+          } else {
+            bills = bills.filter(b => {
+              if (b.sellerId) {
+                const seller = users.value.find(u => u.id === b.sellerId);
+                if (seller && seller.excludeFromGlobalAnalytics) return false;
+              }
+              return true;
+            });
+          }
+
+          if (dashboardFilter.dateRange !== 'all') {
+            bills = bills.filter(b => {
+              if (!b.date) return true;
+              const d = new Date(b.date);
+              const now = new Date();
+              if (dashboardFilter.dateRange === 'today') return d.toDateString() === now.toDateString();
+              if (dashboardFilter.dateRange === 'week') return d >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+              if (dashboardFilter.dateRange === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+              return true;
+            });
+          }
+          return bills.reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
         });
 
         const totalOperationalExpenses = computed(() => {
-          return expenses.value.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+          let exps = expenses.value;
+          
+          if (dashboardFilter.sellerId !== 'all') {
+            exps = exps.filter(e => e.sellerId === dashboardFilter.sellerId);
+          } else {
+            exps = exps.filter(e => {
+              if (e.sellerId) {
+                const seller = users.value.find(u => u.id === e.sellerId);
+                if (seller && seller.excludeFromGlobalAnalytics) return false;
+              }
+              return true;
+            });
+          }
+
+          if (dashboardFilter.dateRange !== 'all') {
+            exps = exps.filter(e => {
+              if (!e.date) return true;
+              const d = new Date(e.date);
+              const now = new Date();
+              if (dashboardFilter.dateRange === 'today') return d.toDateString() === now.toDateString();
+              if (dashboardFilter.dateRange === 'week') return d >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+              if (dashboardFilter.dateRange === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+              return true;
+            });
+          }
+          return exps.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
         });
 
         const sellerBillStats = computed(() => {
@@ -1306,7 +1709,7 @@
                 o.id.toLowerCase().includes(q) ||
                 o.customerName.toLowerCase().includes(q) ||
                 o.customerPhone.includes(q) ||
-                o.designCode.toLowerCase().includes(q)
+                o.fabric.toLowerCase().includes(q)
               );
             }
             return true;
@@ -1341,7 +1744,7 @@
 
           const codeMatch = text.match(/RH-\d{3,4}/i);
           if (codeMatch) {
-            intakeForm.designCode = codeMatch[0].toUpperCase();
+            // designCode extraction removed
             parsedCount++;
           }
 
@@ -1456,18 +1859,22 @@
           });
         };
 
-        const writePngBlobToClipboard = async (pngBlob) => {
+        const writePngBlobToClipboard = async (pngBlob, textMsg = '') => {
           if (!pngBlob) return false;
           try {
             if (navigator.clipboard && navigator.clipboard.write && window.ClipboardItem) {
+              const items = { 'image/png': pngBlob };
+              if (textMsg) {
+                items['text/plain'] = new Blob([textMsg], { type: 'text/plain' });
+              }
               await navigator.clipboard.write([
-                new ClipboardItem({ 'image/png': pngBlob })
+                new ClipboardItem(items)
               ]);
               return true;
             }
             return false;
           } catch (err) {
-            console.warn('Direct clipboard write failed (will allow manual copy):', err);
+            console.warn('Direct clipboard write failed:', err);
             return false;
           }
         };
@@ -1478,8 +1885,8 @@
           // SPECIAL HIGH-DEFINITION RENDERING FOR SINGLE ORDER SUBMISSION
           if (ordersList.length === 1) {
             const ord = ordersList[0];
-            const collageImg = ord.collagePhotoUrl ? await loadImageSafe(ord.collagePhotoUrl) : null;
-            const proofImg = ord.socialProofUrl ? await loadImageSafe(ord.socialProofUrl) : null;
+            const collageImg = (ord.collagePhotoLocalUrl || ord.collagePhotoUrl) ? await loadImageSafe(ord.collagePhotoLocalUrl || ord.collagePhotoUrl) : null;
+            const proofImg = (ord.socialProofLocalUrl || ord.socialProofUrl) ? await loadImageSafe(ord.socialProofLocalUrl || ord.socialProofUrl) : null;
 
             const canvasWidth = 1120;
             const padding = 28;
@@ -1545,7 +1952,7 @@
 
             ctx.fillStyle = '#38bdf8';
             ctx.font = 'bold 13px Inter, system-ui, sans-serif';
-            ctx.fillText(`ORDER MANIFEST: ${ord.id} • ${ord.designCode || 'CUSTOM SPEC'}`, padding + 20, padding + 64);
+            ctx.fillText(`ORDER MANIFEST: ${ord.id} • ${ord.fabric || 'CUSTOM SPEC'}`, padding + 20, padding + 64);
 
             // Order ID / Urgent pill on right
             const pillX = canvasWidth - padding - 210;
@@ -1601,7 +2008,7 @@
             ctx.fillText(`${ord.productCategory || 'Sofa'}`, padding + colWidth + 10, specY + 50);
             ctx.fillStyle = '#a78bfa';
             ctx.font = 'bold 12px Inter, system-ui, sans-serif';
-            ctx.fillText(`Design: ${ord.designCode || 'N/A'}`, padding + colWidth + 10, specY + 70);
+            ctx.fillText(`Fabric: ${ord.fabric || 'N/A'}`, padding + colWidth + 10, specY + 70);
             ctx.fillStyle = '#cbd5e1';
             ctx.font = '11px Inter, system-ui, sans-serif';
             ctx.fillText(`Config: ${ord.seatConfig || 'Standard'}`, padding + colWidth + 10, specY + 92);
@@ -1762,7 +2169,7 @@
             const urls = [];
             // For Factory Bulk Dispatch, only include the Product Collage Photo
             // Exclude Social Proof to keep the factory manifest focused and clean
-            if (ord.collagePhotoUrl) urls.push({ type: 'Collage Photo', url: ord.collagePhotoUrl, filename: ord.collagePhotoFileName });
+            if (ord.collagePhotoUrl) urls.push({ type: 'Collage Photo', url: ord.collagePhotoLocalUrl || ord.collagePhotoUrl, filename: ord.collagePhotoFileName });
 
             if (urls.length === 0) {
               items.push({
@@ -1884,7 +2291,7 @@
               // Order ID & Design Code
               ctx.fillStyle = '#38bdf8';
               ctx.font = 'bold 15px Inter, system-ui, sans-serif';
-              ctx.fillText(`📦 ${ord.id} - ${ord.designCode || 'No Code'}`, cardX + 16, cardY + 26);
+              ctx.fillText(`📦 ${ord.id} - ${ord.fabric || 'No Fabric'}`, cardX + 16, cardY + 26);
 
               // Secondary details line
               ctx.fillStyle = '#cbd5e1';
@@ -1944,10 +2351,13 @@
         };
 
         const copyBothPhotosToClipboard = async (url1, url2, orderObj = null) => {
+          return { success: false, result: null };
+        };
+        const DO_NOT_CALL = async () => {
           try {
             const targetOrders = orderObj ? [orderObj] : [{
               id: 'NEW-ORDER',
-              designCode: intakeForm.designCode || 'Design Spec',
+              fabric: intakeForm.fabric || 'Fabric',
               productCategory: intakeForm.productCategory || 'Item',
               seatConfig: intakeForm.seatConfig || '',
               customerName: intakeForm.customerName || 'Customer',
@@ -2007,7 +2417,7 @@
             customerPhone: intakeForm.customerPhone,
             customerAddress: intakeForm.customerAddress,
             trafficSource: intakeForm.trafficSource,
-            designCode: intakeForm.designCode,
+            fabric: intakeForm.fabric,
             productCategory: intakeForm.productCategory,
             seatConfig: intakeForm.seatConfig,
             fulfillmentMethod: intakeForm.fulfillmentMethod,
@@ -2020,8 +2430,10 @@
             cnNumber: autoCn,
             invoiceNumber: autoInv,
             collagePhotoUrl: intakeForm.collagePhotoUrl || '',
+            collagePhotoLocalUrl: intakeForm.collagePhotoLocalUrl || '',
             collagePhotoFileName: autoFileName,
             socialProofUrl: intakeForm.socialProofUrl || '',
+            socialProofLocalUrl: intakeForm.socialProofLocalUrl || '',
             socialProofFileName: intakeForm.socialProofFileName || '',
             extraDetails: intakeForm.extraDetails || '',
             factoryTag: intakeForm.factoryTag || '',
@@ -2040,7 +2452,7 @@
           intakeForm.customerName = '';
           intakeForm.customerPhone = '';
           intakeForm.customerAddress = '';
-          intakeForm.designCode = '';
+          intakeForm.fabric = '';
           intakeForm.saleAmount = 0;
           intakeForm.deliveryCharge = 0;
           intakeForm.urgent = false;
@@ -2048,36 +2460,66 @@
           intakeForm.cnNumber = '';
           intakeForm.invoiceNumber = '';
           intakeForm.collagePhotoUrl = '';
+          intakeForm.collagePhotoLocalUrl = '';
           intakeForm.collagePhotoFileName = '';
           intakeForm.socialProofUrl = '';
+          intakeForm.socialProofLocalUrl = '';
           intakeForm.socialProofFileName = '';
           intakeForm.extraDetails = '';
           intakeForm.factoryTag = '';
           clipboardRawText.value = '';
           activeTab.value = 'my_orders';
           
-          let hasCopiedPhotos = false;
-          let generatedPngData = null;
-          if (proofUrlToCopy || collageUrlToCopy) {
-            const pngRes = await copyBothPhotosToClipboard(proofUrlToCopy, collageUrlToCopy, newOrder);
-            hasCopiedPhotos = pngRes.success;
-            generatedPngData = pngRes.result;
-          }
-
           let waText = `📦 *NEW HOMEAURA ORDER SUBMISSION*\n`;
           waText += `━━━━━━━━━━━━━━━━━━━━━\n`;
           waText += `🆔 *Order Ref:* ${newOrder.id}\n`;
           waText += `👤 *Merchant:* ${newOrder.merchantName}\n`;
           waText += `📞 *Customer:* ${newOrder.customerName} (${newOrder.customerPhone})\n`;
           waText += `📍 *Delivery Address:* ${newOrder.customerAddress}\n`;
-          waText += `🛋️ *Item:* ${newOrder.productCategory} - ${newOrder.designCode} (${newOrder.seatConfig})\n`;
+          waText += `🛋️ *Item:* ${newOrder.productCategory} (${newOrder.fabric}) (${newOrder.seatConfig})\n`;
           waText += `🚚 *Fulfillment:* ${newOrder.fulfillmentMethod}\n`;
           waText += `💵 *Total Payable:* ৳${(newOrder.totalAmount || 0).toLocaleString()} (Sale: ৳${(newOrder.saleAmount || 0).toLocaleString()} + Del: ৳${(newOrder.deliveryCharge || 0).toLocaleString()})\n`;
           waText += `📑 *CN / Invoice:* ${newOrder.cnNumber || 'N/A'} / ${newOrder.invoiceNumber || 'N/A'}\n`;
           if (newOrder.notes) waText += `📝 *Notes:* ${newOrder.notes}\n`;
           if (newOrder.extraDetails) waText += `🔍 *Specs:* ${newOrder.extraDetails}\n`;
+          if (newOrder.collagePhotoUrl) waText += `🖼️ *Product Photo:* ${newOrder.collagePhotoUrl}\n`;
+          if (newOrder.socialProofUrl) waText += `📸 *Payment/Proof:* ${newOrder.socialProofUrl}\n`;
           waText += `━━━━━━━━━━━━━━━━━━━━━\n`;
           waText += `🕒 *Registered (BST):* ${formatBangladeshDisplayTime(new Date())}\n`;
+
+          let hasCopiedPhotos = false;
+          let generatedPngData = null;
+          let hasCopiedTextAndImage = false;
+
+          try {
+            const pngRes = await generateOrdersCompositePng([newOrder], 'HOMEAURA ORDER ATTACHMENT');
+            if (pngRes && pngRes.blob) {
+              hasCopiedTextAndImage = await writePngBlobToClipboard(pngRes.blob, waText);
+              hasCopiedPhotos = hasCopiedTextAndImage;
+              generatedPngData = pngRes;
+              
+              uploadCompositePngToDrive(pngRes.dataUrl, `order_manifest_${newOrder.id}.png`).then(url => {
+                if (url) {
+                  const targetOrder = orders.value.find(o => o.id === newOrder.id);
+                  if (targetOrder) {
+                    targetOrder.dispatchManifestUrl = url;
+                    queueChange('orders', targetOrder);
+                    saveOrdersLocally();
+                  }
+                }
+              });
+            }
+            if (!hasCopiedTextAndImage) {
+              await navigator.clipboard.writeText(waText);
+              hasCopiedTextAndImage = true;
+            }
+          } catch (err) {
+            console.error('Clipboard copy failed:', err);
+            try {
+              await navigator.clipboard.writeText(waText);
+              hasCopiedTextAndImage = true;
+            } catch (e2) {}
+          }
 
           orderSuccessData.order = newOrder;
           orderSuccessData.hasCopiedPhotos = hasCopiedPhotos;
@@ -2087,7 +2529,7 @@
           orderSuccessData.previewBlob = generatedPngData ? generatedPngData.blob : null;
           orderSuccessData.waGroupLink = (adminWaGroupLink.value || '').trim() || DEFAULT_WA_GROUP_LINK;
           orderSuccessData.formattedSummary = waText;
-          orderSuccessData.isCopiedText = false;
+          orderSuccessData.isCopiedText = hasCopiedTextAndImage;
 
           activeModal.value = 'orderSuccessModal';
 
@@ -2127,7 +2569,7 @@
         // --- FACTORY BILLS AND EXPENSES ---
         const openAddBillModal = () => {
           modalData.title = 'Add Factory Bill & Payment';
-          modalData.bill = reactive({ factoryId: '', amount: '', overcharge: '', date: getBangladeshDateString(new Date()), notes: '', linkedOrderIds: [], photoUrl: '' });
+          modalData.bill = reactive({ factoryId: '', sellerId: '', amount: '', overcharge: '', date: getBangladeshDateString(new Date()), notes: '', linkedOrderIds: [], photoUrl: '' });
           selectedProofTile.value = 'modal';
           activeModal.value = 'factoryBillModal';
         };
@@ -2149,7 +2591,10 @@
           const allOrders = [...orders.value, ...deletedOrders.value];
           modalData.bill.linkedOrderIds = (modalData.bill.linkedOrderIds || []).filter(id => {
             const o = allOrders.find(ord => ord.id === id);
-            return o && o.factoryTag === factoryName;
+            if (!o) return false;
+            if (o.factoryTag !== factoryName) return false;
+            if (modalData.bill.sellerId && o.merchantId !== modalData.bill.sellerId) return false;
+            return true;
           });
 
           let billToSave;
@@ -2299,7 +2744,7 @@
           payload += `*Factory Invoice No:* ${order.invoiceNumber || 'N/A'}\n`;
           payload += `*Date:* ${order.timestamp}\n`;
           payload += `*Product:* ${order.productCategory} (${order.seatConfig})\n`;
-          payload += `*Design Code:* ${order.designCode}\n`;
+          payload += `*Fabric:* ${order.fabric}\n`;
           payload += `*Client Name:* ${order.customerName}\n`;
           payload += `*Client Contact:* ${order.customerPhone}\n`;
           payload += `*Delivery Address:* ${order.customerAddress}\n`;
@@ -2340,18 +2785,24 @@
             waUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
           }
 
-          let hasCopied = false;
+          let hasCopiedTextAndImage = false;
           let generatedPng = null;
           try {
-            if (order.collagePhotoUrl || order.socialProofUrl) {
-              const pngRes = await copyBothPhotosToClipboard(order.socialProofUrl, order.collagePhotoUrl, order);
-              hasCopied = pngRes.success;
-              generatedPng = pngRes.result;
-            } else {
+            const pngRes = await generateOrdersCompositePng([order], `DISPATCH: ${targetFactory.name.toUpperCase()}`);
+            if (pngRes && pngRes.blob) {
+              hasCopiedTextAndImage = await writePngBlobToClipboard(pngRes.blob, messageText);
+              generatedPng = pngRes;
+            }
+            if (!hasCopiedTextAndImage) {
               await navigator.clipboard.writeText(messageText);
+              hasCopiedTextAndImage = true;
             }
           } catch (err) {
             console.error('Clipboard copy failed:', err);
+            try {
+              await navigator.clipboard.writeText(messageText);
+              hasCopiedTextAndImage = true;
+            } catch (e2) {}
           }
 
           bulkDispatchSuccessData.ordersCount = 1;
@@ -2363,7 +2814,7 @@
           bulkDispatchSuccessData.previewPngUrl = generatedPng ? generatedPng.dataUrl : '';
           bulkDispatchSuccessData.compositePngBlob = generatedPng ? generatedPng.blob : null;
           bulkDispatchSuccessData.previewBlob = generatedPng ? generatedPng.blob : null;
-          bulkDispatchSuccessData.hasCopiedPhotos = hasCopied;
+          bulkDispatchSuccessData.hasCopiedPhotos = hasCopiedTextAndImage;
           bulkDispatchSuccessData.manifestText = messageText;
           bulkDispatchSuccessData.isCopiedText = false;
 
@@ -2433,9 +2884,10 @@
 
           selectedList.forEach((ord, index) => {
             manifestText += `*#${index + 1} | Order ID:* ${ord.id}\n`;
-            manifestText += `🛋️ *Item:* ${ord.productCategory} - ${ord.designCode || 'N/A'} (${ord.seatConfig || ''})\n`;
+            manifestText += `🛋️ *Item:* ${ord.productCategory} (${ord.fabric || 'N/A'}) (${ord.seatConfig || ''})\n`;
             if (ord.extraDetails) manifestText += `🔍 *Specs:* ${ord.extraDetails}\n`;
             if (ord.notes) manifestText += `📝 *Notes:* ${ord.notes}\n`;
+            if (ord.collagePhotoUrl) manifestText += `🖼️ Product Photo: ${ord.collagePhotoUrl}\n`;
             manifestText += `------------------------------------\n`;
           });
           manifestText += `\n*Please confirm fabric availability & production queue for the attached order collages.*`;
@@ -2447,6 +2899,20 @@
             pngResult = await generateOrdersCompositePng(selectedList, `BULK DISPATCH: ${targetFactory.name.toUpperCase()}`);
             if (pngResult && pngResult.blob) {
               hasCopiedPhotos = await writePngBlobToClipboard(pngResult.blob);
+
+              const ts = Date.now();
+              uploadCompositePngToDrive(pngResult.dataUrl, `bulk_dispatch_${targetFactory.id}_${ts}.png`).then(url => {
+                if (url) {
+                  selectedList.forEach(order => {
+                    const targetOrder = orders.value.find(o => o.id === order.id);
+                    if (targetOrder) {
+                      targetOrder.dispatchManifestUrl = url;
+                      queueChange('orders', targetOrder);
+                    }
+                  });
+                  saveOrdersLocally();
+                }
+              });
             }
           } catch (err) {
             console.warn('Notice generating bulk composite PNG:', err.message);
@@ -2485,7 +2951,22 @@
           bulkDispatchSuccessData.previewBlob = pngResult ? pngResult.blob : null;
           bulkDispatchSuccessData.hasCopiedPhotos = hasCopiedPhotos;
           bulkDispatchSuccessData.manifestText = manifestText;
-          bulkDispatchSuccessData.isCopiedText = false;
+          try {
+            const pngRes = await generateOrdersCompositePng(selectedList, 'HOMEAURA FACTORY DISPATCH MANIFEST');
+            if (pngRes && pngRes.blob) {
+              const copied = await writePngBlobToClipboard(pngRes.blob, manifestText);
+              bulkDispatchSuccessData.isCopiedText = copied;
+              bulkDispatchSuccessData.compositePngUrl = pngRes.dataUrl;
+              bulkDispatchSuccessData.compositePngBlob = pngRes.blob;
+              if (!copied) await navigator.clipboard.writeText(manifestText);
+            } else {
+              await navigator.clipboard.writeText(manifestText);
+              bulkDispatchSuccessData.isCopiedText = true;
+            }
+          } catch(e) {
+            console.error('Bulk Clipboard write error:', e);
+            bulkDispatchSuccessData.isCopiedText = false;
+          }
 
           // Clear selection
           selectedOrders.value.clear();
@@ -2788,6 +3269,30 @@
           triggerAutoSync(true);
         };
 
+                const updateBackupFrequency = async () => {
+          if (!appsScriptUrl.value) {
+            alert('Please configure the Apps Script URL first.');
+            return;
+          }
+          try {
+            const url = appsScriptUrl.value.trim();
+            localStorage.setItem('homeaura_backup_frequency', backupFrequency.value);
+            const res = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ action: 'setup_backup', hours: parseInt(backupFrequency.value) })
+            });
+            const data = await res.json();
+            if (data && data.status === 'success') {
+              alert(data.message || 'Backup schedule updated successfully!');
+            } else {
+              throw new Error(data.error || 'Unknown error');
+            }
+          } catch(err) {
+            alert('Failed to update backup schedule: ' + err.message);
+          }
+        };
+
         const saveAdminWaGroupLink = async () => {
           const linkToSave = (adminWaGroupLink.value || '').trim() || DEFAULT_WA_GROUP_LINK;
           adminWaGroupLink.value = linkToSave;
@@ -2902,6 +3407,15 @@ function doPost(e) {
     if (payloadObj.action === 'upload_image' && payloadObj.base64) {
       return ContentService.createTextOutput(JSON.stringify(handleDriveImageUpload(payloadObj.filename || 'attachment.jpg', payloadObj.base64))).setMimeType(ContentService.MimeType.JSON);
     }
+    
+    if (payloadObj.action === 'setup_backup') {
+      try {
+        setupBackupTrigger(payloadObj.hours);
+        return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'Backup frequency set to ' + payloadObj.hours + ' hour(s).' })).setMimeType(ContentService.MimeType.JSON);
+      } catch(err) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
     var stats = { updatedRecords: 0, deletedRecords: 0 };
     if (payloadObj.action === 'sync_delta' || payloadObj.delta === true) {
       var changes = payloadObj.changes || {};
@@ -2923,6 +3437,7 @@ function doPost(e) {
         if (idsToDelete && idsToDelete.length > 0) stats.deletedRecords += deleteObjectsById(sheetName, idsToDelete);
       });
       logHistory(payloadObj, stats);
+      try { distributeOrdersBySeller(); } catch(e) {}
       return ContentService.createTextOutput(JSON.stringify({ status: 'success', mode: 'delta', stats: stats, serverTimestamp: new Date().toISOString() })).setMimeType(ContentService.MimeType.JSON);
     }
     if (payloadObj.users) stats.updatedRecords += mergeObjectsByIdLWW("users", payloadObj.users);
@@ -2937,6 +3452,7 @@ function doPost(e) {
       objectsToSheetAtomic("categories", catObjs2);
     }
     logHistory(payloadObj, stats);
+    try { distributeOrdersBySeller(); } catch(e) {}
     return ContentService.createTextOutput(JSON.stringify({ status: 'success', mode: 'full', stats: stats, serverTimestamp: new Date().toISOString() })).setMimeType(ContentService.MimeType.JSON);
   } catch(err) {
     return ContentService.createTextOutput(JSON.stringify({ status: 'error', error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
@@ -3092,7 +3608,90 @@ function logHistory(payload, stats) {
     ]);
     if (historySheet.getLastRow() > 1000) historySheet.deleteRows(2, 200);
   } catch(e) {}
-}`;
+}
+
+function distributeOrdersBySeller() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var orders = sheetToObjects("orders");
+  var users = sheetToObjects("users");
+  
+  var idToUsername = {};
+  var validSellerUsernames = {};
+  
+  users.forEach(function(u) {
+    if (u && u.id && u.username) {
+      idToUsername[u.id] = u.username;
+      // Only allocate individual sheets for sellers and moderators
+      if (u.role === 'seller' || u.role === 'moderator') {
+        validSellerUsernames[u.username] = true;
+      }
+    }
+  });
+  
+  if (Object.keys(validSellerUsernames).length === 0) return;
+  
+  var sellerOrders = {};
+  Object.keys(validSellerUsernames).forEach(function(username) {
+    sellerOrders[username] = [];
+  });
+  
+  orders.forEach(function(o) {
+    if (o && o.merchantId) {
+      var username = idToUsername[o.merchantId];
+      if (username && validSellerUsernames[username]) {
+        sellerOrders[username].push(o);
+      }
+    }
+  });
+  
+  Object.keys(sellerOrders).forEach(function(username) {
+    var sheetName = "Orders_" + username;
+    var userOrders = sellerOrders[username];
+    objectsToSheetAtomic(sheetName, userOrders);
+  });
+  
+  // Cleanup orphaned/stale sheets (e.g., if a username changes or role changes)
+  var allSheets = ss.getSheets();
+  allSheets.forEach(function(sheet) {
+    var sName = sheet.getName();
+    if (sName.indexOf("Orders_") === 0) {
+      var sUser = sName.substring(7);
+      if (!validSellerUsernames[sUser]) {
+        ss.deleteSheet(sheet);
+      }
+    }
+  });
+}
+
+function setupBackupTrigger(hours) {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'backupSpreadsheet') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  if (hours > 0) {
+    ScriptApp.newTrigger('backupSpreadsheet')
+             .timeBased()
+             .everyHours(hours)
+             .create();
+  }
+}
+
+function backupSpreadsheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var formattedDate = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+  var name = ss.getName() + " Backup " + formattedDate;
+  var destFolder = DriveApp.getFoldersByName("HomeAura_Backups");
+  var folder;
+  if (destFolder.hasNext()) {
+    folder = destFolder.next();
+  } else {
+    folder = DriveApp.createFolder("HomeAura_Backups");
+  }
+  DriveApp.getFileById(ss.getId()).makeCopy(name, folder);
+}
+`;
           try {
             await navigator.clipboard.writeText(code);
             alert('✅ Google Apps Script V4 code copied to clipboard!\n\nOpen your Google Sheet > Extensions > Apps Script, paste the code, click Deploy > New Deployment (Web App, Who has access: Anyone), and copy the resulting Web App URL.');
@@ -3202,18 +3801,18 @@ function logHistory(payload, stats) {
         // --- USER PROFILE MANAGEMENT ---
         const openAddUserModal = () => {
           modalData.title = 'Register New User Profile';
-          modalData.user = reactive({ name: '', username: '', password: '1234', role: 'seller', active: true, target: 300000 });
+          modalData.user = reactive({ name: '', username: '', password: '1234', role: 'seller', active: true, target: 300000, visibleSellers: [] });
           activeModal.value = 'userModal';
         };
 
         const openEditUserModal = (user) => {
           modalData.title = `Edit Profile: @${user.username}`;
-          modalData.user = reactive({ ...user });
+          modalData.user = reactive({ ...user, visibleSellers: user.visibleSellers || [] });
           activeModal.value = 'userModal';
         };
 
         const saveUserModal = () => {
-          const idx = users.value.findIndex(u => u.username === modalData.user.username);
+          const idx = users.value.findIndex(u => u && u.username === modalData.user.username);
           let userToSave;
           if (idx !== -1) {
             users.value[idx] = { ...modalData.user };
@@ -3409,6 +4008,32 @@ function logHistory(payload, stats) {
           });
         };
 
+        
+        // Browser Notifications for new tasks
+        watch(tasks, (newTasks, oldTasks) => {
+          if (!currentUser.value) return;
+          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            const oldIds = new Set((oldTasks || []).map(t => t.id));
+            const newAssignedTasks = newTasks.filter(t => !oldIds.has(t.id) && t.status === 'pending' && (t.assigneeId === currentUser.value.id || t.assigneeRole === currentUser.value.role || t.assigneeRole === 'all'));
+            
+            newAssignedTasks.forEach(task => {
+              new Notification('HomeAura Task Assigned', {
+                body: task.title + '\n' + task.description,
+                icon: 'https://cdn-icons-png.flaticon.com/512/3233/3233483.png'
+              });
+            });
+          }
+        }, { deep: true });
+
+        const requestNotificationPermission = () => {
+          if (typeof Notification !== 'undefined' && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+            Notification.requestPermission();
+          }
+        };
+        onMounted(() => {
+          requestNotificationPermission();
+        });
+
         // Watchers for Charts
         watch(activeTab, (val) => {
           if (val === 'dashboard') {
@@ -3499,7 +4124,11 @@ function logHistory(payload, stats) {
               if (!hasImage) return;
             }
 
-            if (selectedProofTile.value === 'terminal') {
+            if (selectedCollageTile.value === 'modal') {
+              if (modalData.order) handleCollagePaste(e, modalData.order);
+            } else if (selectedCollageTile.value === 'terminal') {
+              handleCollagePaste(e, intakeForm);
+            } else if (selectedProofTile.value === 'terminal') {
               handleProofPaste(e, intakeForm);
             } else if (selectedProofTile.value === 'modal') {
               if (modalData.order) handleProofPaste(e, modalData.order);
@@ -3511,7 +4140,7 @@ function logHistory(payload, stats) {
         return {
           getBillOrdersTotalSale,
           getOrdersByIds,
-          factoryBills,
+          factoryBills, isTasksPanelOpen, isUserOnline, newTask, createNewTask, markTaskDone, unreadNotificationsCount, tasks, notifications,
           openAddBillModal,
           openEditBillModal,
           saveBillModal,
@@ -3529,6 +4158,10 @@ function logHistory(payload, stats) {
           toggleDarkMode,
           openInspectModal,
           selectedProofTile,
+          selectedCollageTile,
+          selectCollageTile,
+          handleCollagePaste,
+          handleCollageDrop,
           selectProofTile,
           activeTab,
           loginForm,
@@ -3543,6 +4176,8 @@ function logHistory(payload, stats) {
           toggleAllSelection,
           bulkDeleteSelected,
           bulkDispatchSelected,
+          updateBackupFrequency,
+          backupFrequency,
           appsScriptUrl,
           isBackingUp,
           isPushing,
@@ -3579,7 +4214,7 @@ function logHistory(payload, stats) {
           modalData,
           metrics,
           sellersList,
-          merchantStats,
+          merchantStats, steadfastReport, dashboardFilter,
           factoryBillStats,
           sellerBillStats,
           totalFactoryBillsAmount,
