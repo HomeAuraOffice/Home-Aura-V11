@@ -1947,11 +1947,11 @@
 
             // Brand & Order Badge
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 22px Inter, system-ui, sans-serif';
+            ctx.font = 'bold 22px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.fillText('✨ HOMEAURA LUXURY FURNITURE', padding + 20, padding + 38);
 
             ctx.fillStyle = '#38bdf8';
-            ctx.font = 'bold 13px Inter, system-ui, sans-serif';
+            ctx.font = 'bold 13px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.fillText(`ORDER MANIFEST: ${ord.id} • ${ord.fabric || 'CUSTOM SPEC'}`, padding + 20, padding + 64);
 
             // Order ID / Urgent pill on right
@@ -1962,10 +1962,10 @@
             ctx.fill();
 
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 15px Inter, system-ui, sans-serif';
+            ctx.font = 'bold 15px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.textAlign = 'center';
             ctx.fillText(ord.id, pillX + 95, padding + 44);
-            ctx.font = '10px Inter, system-ui, sans-serif';
+            ctx.font = '10px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.fillText(ord.urgent ? '🚨 URGENT RUSH ORDER' : `MERCHANT: ${ord.merchantName || 'SELLER'}`, pillX + 95, padding + 60);
             ctx.textAlign = 'left';
 
@@ -1983,70 +1983,70 @@
 
             // Column 1: Client
             ctx.fillStyle = '#94a3b8';
-            ctx.font = 'bold 10px Inter, system-ui, sans-serif';
+            ctx.font = 'bold 10px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.fillText('👤 CUSTOMER INFORMATION', padding + 16, specY + 28);
             ctx.fillStyle = '#f8fafc';
-            ctx.font = 'bold 14px Inter, system-ui, sans-serif';
+            ctx.font = 'bold 14px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.fillText(ord.customerName || 'N/A', padding + 16, specY + 50);
             ctx.fillStyle = '#38bdf8';
-            ctx.font = '12px Inter, system-ui, sans-serif';
+            ctx.font = '12px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.fillText(ord.customerPhone || 'N/A', padding + 16, specY + 70);
             ctx.fillStyle = '#cbd5e1';
-            ctx.font = '11px Inter, system-ui, sans-serif';
+            ctx.font = '11px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             const addr = ord.customerAddress || 'N/A';
             ctx.fillText(addr.length > 36 ? addr.slice(0, 34) + '...' : addr, padding + 16, specY + 92);
             ctx.fillStyle = '#64748b';
-            ctx.font = '10px Inter, system-ui, sans-serif';
+            ctx.font = '10px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.fillText(`Source: ${ord.trafficSource || 'Direct'}`, padding + 16, specY + 114);
 
             // Column 2: Product & Config
             ctx.fillStyle = '#94a3b8';
-            ctx.font = 'bold 10px Inter, system-ui, sans-serif';
+            ctx.font = 'bold 10px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.fillText('🛋️ PRODUCT SPECIFICATION', padding + colWidth + 10, specY + 28);
             ctx.fillStyle = '#f8fafc';
-            ctx.font = 'bold 14px Inter, system-ui, sans-serif';
+            ctx.font = 'bold 14px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.fillText(`${ord.productCategory || 'Sofa'}`, padding + colWidth + 10, specY + 50);
             ctx.fillStyle = '#a78bfa';
-            ctx.font = 'bold 12px Inter, system-ui, sans-serif';
+            ctx.font = 'bold 12px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.fillText(`Fabric: ${ord.fabric || 'N/A'}`, padding + colWidth + 10, specY + 70);
             ctx.fillStyle = '#cbd5e1';
-            ctx.font = '11px Inter, system-ui, sans-serif';
+            ctx.font = '11px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.fillText(`Config: ${ord.seatConfig || 'Standard'}`, padding + colWidth + 10, specY + 92);
             ctx.fillStyle = '#64748b';
-            ctx.font = '10px Inter, system-ui, sans-serif';
+            ctx.font = '10px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.fillText(`Fulfillment: ${ord.fulfillmentMethod || 'Delivery'}`, padding + colWidth + 10, specY + 114);
 
             // Column 3: Pricing
             ctx.fillStyle = '#94a3b8';
-            ctx.font = 'bold 10px Inter, system-ui, sans-serif';
+            ctx.font = 'bold 10px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.fillText('💵 FINANCIAL BREAKDOWN', padding + colWidth * 2 + 10, specY + 28);
             ctx.fillStyle = '#cbd5e1';
-            ctx.font = '12px Inter, system-ui, sans-serif';
+            ctx.font = '12px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.fillText(`Sale Price: ৳${(ord.saleAmount || 0).toLocaleString()}`, padding + colWidth * 2 + 10, specY + 50);
             ctx.fillText(`Delivery: ৳${(ord.deliveryCharge || 0).toLocaleString()}`, padding + colWidth * 2 + 10, specY + 70);
             ctx.fillStyle = '#34d399';
-            ctx.font = 'bold 16px Inter, system-ui, sans-serif';
+            ctx.font = 'bold 16px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.fillText(`TOTAL: ৳${(ord.totalAmount || 0).toLocaleString()}`, padding + colWidth * 2 + 10, specY + 98);
             ctx.fillStyle = '#64748b';
-            ctx.font = '10px Inter, system-ui, sans-serif';
+            ctx.font = '10px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.fillText(`Status: ${ord.status || 'Active'}`, padding + colWidth * 2 + 10, specY + 120);
 
             // Column 4: Tracking & Notes
             ctx.fillStyle = '#94a3b8';
-            ctx.font = 'bold 10px Inter, system-ui, sans-serif';
+            ctx.font = 'bold 10px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.fillText('📑 LOGISTICS & NOTES', padding + colWidth * 3 + 10, specY + 28);
             ctx.fillStyle = '#f8fafc';
-            ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+            ctx.font = 'bold 11px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.fillText(`CN: ${ord.cnNumber || 'N/A'}`, padding + colWidth * 3 + 10, specY + 50);
             ctx.fillText(`Invoice: ${ord.invoiceNumber || 'N/A'}`, padding + colWidth * 3 + 10, specY + 68);
             if (ord.extraDetails) {
               ctx.fillStyle = '#fbbf24';
-              ctx.font = '10px Inter, system-ui, sans-serif';
+              ctx.font = '10px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
               ctx.fillText(`Specs: ${ord.extraDetails.slice(0, 30)}`, padding + colWidth * 3 + 10, specY + 88);
             }
             if (ord.notes) {
               ctx.fillStyle = '#94a3b8';
-              ctx.font = 'italic 10px Inter, system-ui, sans-serif';
+              ctx.font = 'italic 10px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
               ctx.fillText(`Note: ${ord.notes.slice(0, 30)}`, padding + colWidth * 3 + 10, specY + 108);
             }
 
@@ -2070,7 +2070,7 @@
               ctx.roundRect(padding + 12, imgY + 12, 170, 24, 6);
               ctx.fill();
               ctx.fillStyle = '#ffffff';
-              ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+              ctx.font = 'bold 11px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
               ctx.fillText('📸 PRODUCT COLLAGE', padding + 20, imgY + 28);
 
               ctx.save();
@@ -2094,7 +2094,7 @@
               ctx.roundRect(rightX + 12, imgY + 12, 190, 24, 6);
               ctx.fill();
               ctx.fillStyle = '#ffffff';
-              ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+              ctx.font = 'bold 11px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
               ctx.fillText('💬 CHAT & SOCIAL PROOF', rightX + 20, imgY + 28);
 
               ctx.save();
@@ -2122,7 +2122,7 @@
               ctx.roundRect(padding + 14, imgY + 12, 200, 24, 6);
               ctx.fill();
               ctx.fillStyle = '#ffffff';
-              ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+              ctx.font = 'bold 11px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
               ctx.fillText(isCollage ? '📸 PRODUCT COLLAGE PHOTO' : '💬 SOCIAL PROOF SCREENSHOT', padding + 22, imgY + 28);
 
               ctx.save();
@@ -2139,7 +2139,7 @@
               ctx.roundRect(padding, imgY, cardW, imageSectionHeight, 14);
               ctx.fill();
               ctx.fillStyle = '#94a3b8';
-              ctx.font = 'italic 13px Inter, system-ui, sans-serif';
+              ctx.font = 'italic 13px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
               ctx.fillText('ℹ️ No image attachments uploaded for this order manifest.', padding + 24, imgY + 65);
             }
 
@@ -2149,7 +2149,7 @@
             ctx.fillRect(0, footY, canvasWidth, footerHeight);
 
             ctx.fillStyle = '#64748b';
-            ctx.font = '11px Inter, system-ui, sans-serif';
+            ctx.font = '11px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
             ctx.fillText(`🕒 Verified Bangladesh Time (BST, UTC+6): ${formatBangladeshDisplayTime(new Date())} | HomeAura Production Hub`, padding, footY + 26);
 
             return new Promise((resolve) => {
@@ -2251,11 +2251,11 @@
 
           // Master Header Text
           ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 24px Inter, system-ui, sans-serif';
+          ctx.font = 'bold 24px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
           ctx.fillText(`✨ ${headerTitle}`, padding + 4, 42);
 
           ctx.fillStyle = '#94a3b8';
-          ctx.font = '13px Inter, system-ui, sans-serif';
+          ctx.font = '13px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
           const subText = `Batch: ${ordersList.length} Order(s) | Attached Collages: ${numItems} Image(s) | Bangladesh Time: ${formatBangladeshDisplayTime(new Date())}`;
           ctx.fillText(subText, padding + 4, 70);
 
@@ -2290,12 +2290,12 @@
 
               // Order ID & Design Code
               ctx.fillStyle = '#38bdf8';
-              ctx.font = 'bold 15px Inter, system-ui, sans-serif';
+              ctx.font = 'bold 15px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
               ctx.fillText(`📦 ${ord.id} - ${ord.fabric || 'No Fabric'}`, cardX + 16, cardY + 26);
 
               // Secondary details line
               ctx.fillStyle = '#cbd5e1';
-              ctx.font = '12px Inter, system-ui, sans-serif';
+              ctx.font = '12px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
               const detailStr = `Item: ${ord.productCategory || 'N/A'} (${ord.seatConfig || ''}) | Specs: ${ord.extraDetails || 'Standard'}`;
               ctx.fillText(detailStr.length > 50 ? detailStr.slice(0, 48) + '...' : detailStr, cardX + 16, cardY + 48);
 
@@ -2305,7 +2305,7 @@
               ctx.roundRect(cardX + cardWidth - 120, cardY + 14, 106, 24, 6);
               ctx.fill();
               ctx.fillStyle = '#ffffff';
-              ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+              ctx.font = 'bold 11px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
               ctx.fillText(item.type, cardX + cardWidth - 110, cardY + 30);
 
               // Image Area
@@ -2327,10 +2327,10 @@
                 ctx.roundRect(imgAreaX, imgAreaY, imgAreaW, imgAreaH, 10);
                 ctx.fill();
                 ctx.fillStyle = '#94a3b8';
-                ctx.font = 'italic 13px Inter, system-ui, sans-serif';
+                ctx.font = 'italic 13px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
                 ctx.fillText('No image attachment uploaded', imgAreaX + 18, imgAreaY + 36);
                 ctx.fillStyle = '#e2e8f0';
-                ctx.font = '12px Inter, system-ui, sans-serif';
+                ctx.font = '12px Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
                 ctx.fillText(`Phone: ${ord.customerPhone || 'N/A'}`, imgAreaX + 18, imgAreaY + 66);
                 ctx.fillText(`Address: ${ord.customerAddress || 'N/A'}`, imgAreaX + 18, imgAreaY + 90);
                 if (ord.extraDetails) ctx.fillText(`Specs: ${ord.extraDetails}`, imgAreaX + 18, imgAreaY + 114);
