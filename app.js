@@ -20,11 +20,7 @@
         ];
 
         // --- SEEDING DEFAULT FACTORIES ---
-        const defaultFactories = [
-          { id: 'f1', name: 'Apex Crafting Hub', phone: '01711002233', waGroupLink: 'https://chat.whatsapp.com/sample-apex-hub', fabricQuality: 5, stockStatus: 'In Stock', baseWholesaleCost: 40000, notes: 'Premium velvet upholstery specialist with fast turnarounds.' },
-          { id: 'f2', name: 'Royal Heritage Workshop', phone: '01819001122', waGroupLink: 'https://chat.whatsapp.com/sample-royal-heritage', fabricQuality: 4, stockStatus: 'In Stock', baseWholesaleCost: 38000, notes: 'Teak wood frames and linen couch sets.' },
-          { id: 'f3', name: 'Standard Guild Factory', phone: '01912003344', waGroupLink: 'https://chat.whatsapp.com/sample-standard-guild', fabricQuality: 3, stockStatus: 'Low Stock', baseWholesaleCost: 32000, notes: 'Budget commercial grade furniture.' }
-        ];
+        const defaultFactories = [];
 
         const sampleCollagePresets = [
           { name: 'Royal Velvet Sofa', url: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80' },
@@ -33,18 +29,8 @@
           { name: 'Chesterfield Armchair', url: 'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?auto=format&fit=crop&w=600&q=80' }
         ];
 
-        // --- SEEDING 9 REAL-WORLD BOOTSTRAP ORDERS ---
-        const defaultOrders = [
-          { id: 'ORD-1001', timestamp: '2026-08-01 10:15', merchantId: 'u2', merchantName: 'Tanvir Hossain', customerName: 'Far Ha Na', customerPhone: '01711223344', customerAddress: 'Apt 4B, Green Road, Dhanmondi, Dhaka', trafficSource: 'Messenger', designCode: 'RH-336', productCategory: 'L-Shape Sofa', seatConfig: 'L-Shape', fulfillmentMethod: 'Home Delivery', saleAmount: 65000, deliveryCharge: 2500, totalAmount: 67500, status: 'Delivered', urgent: false, notes: 'Navy blue velvet fabric.', cnNumber: '276331879', invoiceNumber: 'INV-1001', collagePhotoFileName: 'collage_attachments/seller1_CN-1001_INV-1001_2026-08-01.jpg', updatedAt: '2026-08-01T10:15:00.000Z' },
-          { id: 'ORD-1002', timestamp: '2026-08-02 11:30', merchantId: 'u2', merchantName: 'Tanvir Hossain', customerName: 'Muslim Wddin Piyash', customerPhone: '01819876543', customerAddress: 'House 12, Road 4, Sector 7, Uttara, Dhaka', trafficSource: 'WhatsApp', designCode: 'RH-337', productCategory: 'Sofa Set', seatConfig: '3-Seater', fulfillmentMethod: 'Home Delivery', saleAmount: 48000, deliveryCharge: 2000, totalAmount: 50000, status: 'Courier Booking', urgent: true, notes: 'Requested delivery before weekend.', cnNumber: '278097551', invoiceNumber: 'INV-1002', collagePhotoFileName: 'collage_attachments/seller1_CN-1002_INV-1002_2026-08-02.jpg', updatedAt: '2026-08-02T11:30:00.000Z' },
-          { id: 'ORD-1003', timestamp: '2026-08-03 14:20', merchantId: 'u3', merchantName: 'Ariful Ahmed', customerName: 'Rayhan Kabir', customerPhone: '01912345678', customerAddress: 'GEC Circle, Nasirabad, Chattogram', trafficSource: 'Direct Call', designCode: 'RH-338', productCategory: 'Recliner Chair', seatConfig: '1-Seater', fulfillmentMethod: 'Courier Service', saleAmount: 28000, deliveryCharge: 1500, totalAmount: 29500, status: 'Courier Pending', urgent: false, notes: 'Tagged via Sundarban Courier.', cnNumber: '279816167', invoiceNumber: 'INV-1003', collagePhotoFileName: 'collage_attachments/seller2_CN-1003_INV-1003_2026-08-03.jpg', updatedAt: '2026-08-03T14:20:00.000Z' },
-          { id: 'ORD-1004', timestamp: '2026-08-04 09:45', merchantId: 'u4', merchantName: 'Farah Naz', customerName: 'Anisur Rahman', customerPhone: '01715556677', customerAddress: 'Zindabazar, Sylhet Sadar, Sylhet', trafficSource: 'Walk-in', designCode: 'RH-339', productCategory: 'Dining Table', seatConfig: 'Custom Set', fulfillmentMethod: 'Courier Service', saleAmount: 85000, deliveryCharge: 3500, totalAmount: 88500, status: 'Factory Submit', urgent: false, notes: '6-seater in Teak wood finish.', cnNumber: '279818987', invoiceNumber: 'INV-1004', collagePhotoFileName: 'collage_attachments/seller3_CN-1004_INV-1004_2026-08-04.jpg', updatedAt: '2026-08-04T09:45:00.000Z' },
-          { id: 'ORD-1005', timestamp: '2026-08-05 16:10', merchantId: 'u2', merchantName: 'Tanvir Hossain', customerName: 'Tahmina Begum', customerPhone: '01611224455', customerAddress: 'Block C, Bashundhara R/A, Dhaka', trafficSource: 'Messenger', designCode: 'RH-340', productCategory: 'L-Shape Sofa', seatConfig: 'L-Shape', fulfillmentMethod: 'Home Delivery', saleAmount: 72000, deliveryCharge: 3000, totalAmount: 75000, status: 'Confirmation Call', urgent: true, notes: 'Verify color swatch.', cnNumber: '281926578', invoiceNumber: 'INV-1005', collagePhotoFileName: 'collage_attachments/seller1_CN-1005_INV-1005_2026-08-05.jpg', updatedAt: '2026-08-05T16:10:00.000Z' },
-          { id: 'ORD-1006', timestamp: '2026-08-06 13:05', merchantId: 'u3', merchantName: 'Ariful Ahmed', customerName: 'Kazi Shakil', customerPhone: '01812334455', customerAddress: 'College Road, Mymensingh Sadar', trafficSource: 'WhatsApp', designCode: 'RH-342', productCategory: 'Sofa Set', seatConfig: '2-Seater', fulfillmentMethod: 'Courier Service', saleAmount: 36000, deliveryCharge: 1800, totalAmount: 37800, status: 'Delivered', urgent: false, notes: 'Full payment cleared.', cnNumber: '281927672', invoiceNumber: 'INV-1006', collagePhotoFileName: 'collage_attachments/seller2_CN-1006_INV-1006_2026-08-06.jpg', updatedAt: '2026-08-06T13:05:00.000Z' },
-          { id: 'ORD-1007', timestamp: '2026-08-07 10:50', merchantId: 'u4', merchantName: 'Farah Naz', customerName: 'Nusrat Jahan', customerPhone: '01799887766', customerAddress: 'Chashara, Narayanganj', trafficSource: 'Messenger', designCode: 'RH-343', productCategory: 'Custom Bed', seatConfig: 'Custom Set', fulfillmentMethod: 'Home Delivery', saleAmount: 95000, deliveryCharge: 2500, totalAmount: 97500, status: 'Partial Delivered', urgent: false, notes: 'Frame delivered, mattress pending.', cnNumber: '282095540', invoiceNumber: 'INV-1007', collagePhotoFileName: 'collage_attachments/seller3_CN-1007_INV-1007_2026-08-07.jpg', updatedAt: '2026-08-07T10:50:00.000Z' },
-          { id: 'ORD-1008', timestamp: '2026-08-08 15:30', merchantId: 'u2', merchantName: 'Tanvir Hossain', customerName: 'Mahfuzur Rahman', customerPhone: '01552345678', customerAddress: 'Main Road, Rajshahi Sadar', trafficSource: 'Direct Call', designCode: 'RH-345', productCategory: 'Recliner Chair', seatConfig: '1-Seater', fulfillmentMethod: 'Courier Service', saleAmount: 30000, deliveryCharge: 1500, totalAmount: 31500, status: 'Returned from Customer', urgent: true, notes: 'Color mismatch claim.', cnNumber: '282403020', invoiceNumber: 'INV-1008', collagePhotoFileName: 'collage_attachments/seller1_CN-1008_INV-1008_2026-08-08.jpg', updatedAt: '2026-08-08T15:30:00.000Z' },
-          { id: 'ORD-1009', timestamp: '2026-08-09 11:15', merchantId: 'u3', merchantName: 'Ariful Ahmed', customerName: 'Sultana Razia', customerPhone: '01733445566', customerAddress: 'Shibbari More, Khulna', trafficSource: 'WhatsApp', designCode: 'RH-346', productCategory: 'Sofa Set', seatConfig: '3-Seater', fulfillmentMethod: 'Courier Service', saleAmount: 52000, deliveryCharge: 2200, totalAmount: 54200, status: 'Returned Received', urgent: false, notes: 'Returned to warehouse.', cnNumber: '282531127', invoiceNumber: 'INV-1009', collagePhotoFileName: 'collage_attachments/seller2_CN-1009_INV-1009_2026-08-09.jpg', updatedAt: '2026-08-09T11:15:00.000Z' }
-        ];
+        // --- EMPTY INITIAL BOOTSTRAP ORDERS (DATA LOADS FROM GOOGLE SHEETS) ---
+        const defaultOrders = [];
 
         const defaultCategories = ['L-Shape Sofa', 'Sofa Set', 'Recliner Chair', 'Dining Table', 'Custom Bed', 'Living Room Accessories'];
 
@@ -456,14 +442,26 @@
 
             let updatedCount = 0;
 
-            // 1. Orders Smart Merge (LWW per record)
+            // 1. Orders Smart Merge (Remote Source of Truth with Local Offline Preservation)
             if (Array.isArray(data.orders)) {
               const remoteOrderMap = new Map();
               data.orders.forEach(ro => { if (ro && ro.id) remoteOrderMap.set(String(ro.id), ro); });
 
-              orders.value.forEach(localOrd => {
-                const remoteOrd = remoteOrderMap.get(String(localOrd.id));
-                if (remoteOrd) {
+              const newOrdersList = [];
+              const processedIds = new Set();
+
+              // Merge/add all remote orders
+              data.orders.forEach(remoteOrd => {
+                if (!remoteOrd || !remoteOrd.id) return;
+                const rId = String(remoteOrd.id);
+                processedIds.add(rId);
+
+                const wasDeletedLocally = deletedOrders.value.some(d => String(d.id) === rId) ||
+                  (syncQueue.value.deletes.orders && syncQueue.value.deletes.orders.map(String).includes(rId));
+                if (wasDeletedLocally) return;
+
+                const localOrd = orders.value.find(o => String(o.id) === rId);
+                if (localOrd) {
                   const hasLocalPending = syncQueue.value.changes.orders && syncQueue.value.changes.orders[localOrd.id];
                   if (!hasLocalPending) {
                     const locTime = localOrd.updatedAt ? new Date(localOrd.updatedAt).getTime() : 0;
@@ -474,80 +472,145 @@
                       if (prevStatus !== remoteOrd.status) updatedCount++;
                     }
                   }
-                  remoteOrderMap.delete(String(localOrd.id));
-                }
-              });
-
-              // Add newly created remote orders
-              remoteOrderMap.forEach(newRemoteOrd => {
-                const wasDeletedLocally = deletedOrders.value.some(d => d.id === newRemoteOrd.id) ||
-                  (syncQueue.value.deletes.orders && syncQueue.value.deletes.orders.includes(newRemoteOrd.id));
-                if (!wasDeletedLocally) {
-                  orders.value.unshift(newRemoteOrd);
+                  newOrdersList.push(localOrd);
+                } else {
+                  newOrdersList.push(remoteOrd);
                   updatedCount++;
                 }
               });
 
+              // Keep only truly local new orders created offline that haven't been pushed to the remote sheet yet
+              orders.value.forEach(localOrd => {
+                if (!localOrd || !localOrd.id) return;
+                const lId = String(localOrd.id);
+                if (!processedIds.has(lId)) {
+                  const hasLocalPending = syncQueue.value.changes.orders && syncQueue.value.changes.orders[localOrd.id];
+                  if (hasLocalPending) {
+                    newOrdersList.unshift(localOrd);
+                  }
+                }
+              });
+
+              orders.value = newOrdersList;
               localStorage.setItem('homeaura_orders', JSON.stringify(orders.value));
             }
 
             // 2. Deleted Orders Merge
             if (Array.isArray(data.deletedOrders)) {
               data.deletedOrders.forEach(remDel => {
-                if (remDel && remDel.id && !deletedOrders.value.some(ld => ld.id === remDel.id)) {
+                if (remDel && remDel.id && !deletedOrders.value.some(ld => String(ld.id) === String(remDel.id))) {
                   deletedOrders.value.unshift(remDel);
-                  orders.value = orders.value.filter(o => o.id !== remDel.id);
                 }
               });
+              orders.value = orders.value.filter(o => !deletedOrders.value.some(d => String(d.id) === String(o.id)));
               localStorage.setItem('homeaura_deleted_orders', JSON.stringify(deletedOrders.value));
+              localStorage.setItem('homeaura_orders', JSON.stringify(orders.value));
             }
 
             // 3. Users Merge
             if (Array.isArray(data.users) && data.users.length > 0) {
               const userMap = new Map();
               data.users.forEach(u => { if (u && u.username) userMap.set(String(u.username), u); });
-              users.value.forEach(localU => {
-                const remoteU = userMap.get(String(localU.username));
-                if (remoteU && (!syncQueue.value.changes.users || !syncQueue.value.changes.users[localU.id])) {
-                  Object.assign(localU, remoteU);
-                  userMap.delete(String(localU.username));
+              const newUsersList = [];
+              const processedUsernames = new Set();
+
+              data.users.forEach(remoteU => {
+                if (!remoteU || !remoteU.username) return;
+                const uname = String(remoteU.username);
+                processedUsernames.add(uname);
+                const localU = users.value.find(u => String(u.username) === uname);
+                if (localU) {
+                  if (!syncQueue.value.changes.users || !syncQueue.value.changes.users[localU.id]) {
+                    Object.assign(localU, remoteU);
+                  }
+                  newUsersList.push(localU);
+                } else {
+                  newUsersList.push(remoteU);
                 }
               });
-              userMap.forEach(newU => users.value.push(newU));
-              localStorage.setItem('homeaura_users', JSON.stringify(users.value));
+
+              users.value.forEach(localU => {
+                if (localU && localU.username && !processedUsernames.has(String(localU.username))) {
+                  if (syncQueue.value.changes.users && syncQueue.value.changes.users[localU.id]) {
+                    newUsersList.push(localU);
+                  }
+                }
+              });
+
+              if (newUsersList.length > 0) {
+                users.value = newUsersList;
+                localStorage.setItem('homeaura_users', JSON.stringify(users.value));
+              }
             }
 
             // 4. Factories Merge
             if (Array.isArray(data.factories)) {
-              const facMap = new Map();
-              data.factories.forEach(f => { if (f && f.id) facMap.set(String(f.id), f); });
-              factories.value.forEach(localF => {
-                const remoteF = facMap.get(String(localF.id));
-                if (remoteF && (!syncQueue.value.changes.factories || !syncQueue.value.changes.factories[localF.id])) {
-                  Object.assign(localF, remoteF);
-                  facMap.delete(String(localF.id));
-                }
-              });
-              facMap.forEach(newF => factories.value.push(newF));
-              localStorage.setItem('homeaura_factories', JSON.stringify(factories.value));
+              if (data.factories.length > 0 || factories.value.length === 0) {
+                const facMap = new Map();
+                data.factories.forEach(f => { if (f && f.id) facMap.set(String(f.id), f); });
+                const newFacsList = [];
+                const processedFacIds = new Set();
+
+                data.factories.forEach(remoteF => {
+                  if (!remoteF || !remoteF.id) return;
+                  const fid = String(remoteF.id);
+                  processedFacIds.add(fid);
+                  const localF = factories.value.find(f => String(f.id) === fid);
+                  if (localF) {
+                    if (!syncQueue.value.changes.factories || !syncQueue.value.changes.factories[localF.id]) {
+                      Object.assign(localF, remoteF);
+                    }
+                    newFacsList.push(localF);
+                  } else {
+                    newFacsList.push(remoteF);
+                  }
+                });
+
+                factories.value.forEach(localF => {
+                  if (localF && localF.id && !processedFacIds.has(String(localF.id))) {
+                    if (syncQueue.value.changes.factories && syncQueue.value.changes.factories[localF.id]) {
+                      newFacsList.push(localF);
+                    }
+                  }
+                });
+
+                factories.value = newFacsList;
+                localStorage.setItem('homeaura_factories', JSON.stringify(factories.value));
+              }
             }
 
             // 5. Factory Bills Merge
             if (Array.isArray(data.factoryBills)) {
               const billMap = new Map();
               data.factoryBills.forEach(b => { if (b && b.id) billMap.set(String(b.id), b); });
+              const newBillsList = [];
+              const processedBillIds = new Set();
+
+              data.factoryBills.forEach(remoteB => {
+                if (!remoteB || !remoteB.id) return;
+                const bid = String(remoteB.id);
+                processedBillIds.add(bid);
+                if (syncQueue.value.deletes.factoryBills && syncQueue.value.deletes.factoryBills.includes(remoteB.id)) return;
+                const localB = factoryBills.value.find(b => String(b.id) === bid);
+                if (localB) {
+                  if (!syncQueue.value.changes.factoryBills || !syncQueue.value.changes.factoryBills[localB.id]) {
+                    Object.assign(localB, remoteB);
+                  }
+                  newBillsList.push(localB);
+                } else {
+                  newBillsList.push(remoteB);
+                }
+              });
+
               factoryBills.value.forEach(localB => {
-                const remoteB = billMap.get(String(localB.id));
-                if (remoteB && (!syncQueue.value.changes.factoryBills || !syncQueue.value.changes.factoryBills[localB.id])) {
-                  Object.assign(localB, remoteB);
-                  billMap.delete(String(localB.id));
+                if (localB && localB.id && !processedBillIds.has(String(localB.id))) {
+                  if (syncQueue.value.changes.factoryBills && syncQueue.value.changes.factoryBills[localB.id]) {
+                    newBillsList.push(localB);
+                  }
                 }
               });
-              billMap.forEach(newB => {
-                if (!syncQueue.value.deletes.factoryBills || !syncQueue.value.deletes.factoryBills.includes(newB.id)) {
-                  factoryBills.value.unshift(newB);
-                }
-              });
+
+              factoryBills.value = newBillsList;
               localStorage.setItem('homeaura_factory_bills', JSON.stringify(factoryBills.value));
             }
 
@@ -555,18 +618,34 @@
             if (Array.isArray(data.expenses)) {
               const expMap = new Map();
               data.expenses.forEach(e => { if (e && e.id) expMap.set(String(e.id), e); });
+              const newExpList = [];
+              const processedExpIds = new Set();
+
+              data.expenses.forEach(remoteE => {
+                if (!remoteE || !remoteE.id) return;
+                const eid = String(remoteE.id);
+                processedExpIds.add(eid);
+                if (syncQueue.value.deletes.expenses && syncQueue.value.deletes.expenses.includes(remoteE.id)) return;
+                const localE = expenses.value.find(e => String(e.id) === eid);
+                if (localE) {
+                  if (!syncQueue.value.changes.expenses || !syncQueue.value.changes.expenses[localE.id]) {
+                    Object.assign(localE, remoteE);
+                  }
+                  newExpList.push(localE);
+                } else {
+                  newExpList.push(remoteE);
+                }
+              });
+
               expenses.value.forEach(localE => {
-                const remoteE = expMap.get(String(localE.id));
-                if (remoteE && (!syncQueue.value.changes.expenses || !syncQueue.value.changes.expenses[localE.id])) {
-                  Object.assign(localE, remoteE);
-                  expMap.delete(String(localE.id));
+                if (localE && localE.id && !processedExpIds.has(String(localE.id))) {
+                  if (syncQueue.value.changes.expenses && syncQueue.value.changes.expenses[localE.id]) {
+                    newExpList.push(localE);
+                  }
                 }
               });
-              expMap.forEach(newE => {
-                if (!syncQueue.value.deletes.expenses || !syncQueue.value.deletes.expenses.includes(newE.id)) {
-                  expenses.value.unshift(newE);
-                }
-              });
+
+              expenses.value = newExpList;
               localStorage.setItem('homeaura_expenses', JSON.stringify(expenses.value));
             }
 
@@ -654,9 +733,28 @@
           users.value = parsedUsrs;
           if (!storedUsers) localStorage.setItem('homeaura_users', JSON.stringify(defaultUsers));
 
+          const fakeOrderIds = new Set(['ORD-1001', 'ORD-1002', 'ORD-1003', 'ORD-1004', 'ORD-1005', 'ORD-1006', 'ORD-1007', 'ORD-1008', 'ORD-1009']);
           const storedOrders = localStorage.getItem('homeaura_orders');
-          orders.value = storedOrders ? JSON.parse(storedOrders) : defaultOrders;
-          if (!storedOrders) localStorage.setItem('homeaura_orders', JSON.stringify(defaultOrders));
+          let parsedOrders = [];
+          if (storedOrders) {
+            try {
+              const loaded = JSON.parse(storedOrders);
+              if (Array.isArray(loaded)) {
+                // Filter out legacy fake demo orders
+                parsedOrders = loaded.filter(o => {
+                  if (!o || !o.id) return false;
+                  if (fakeOrderIds.has(String(o.id)) && (o.customerName === 'Far Ha Na' || o.customerName === 'Muslim Wddin Piyash' || o.customerName === 'Rayhan Kabir' || o.customerName === 'Farah Naz' || o.customerName === 'Tanvir Hossain' || o.customerName === 'Kazi Shakil' || o.customerName === 'Nusrat Jahan' || o.customerName === 'Mahfuzur Rahman' || o.customerName === 'Sultana Razia' || o.customerName === 'Anisur Rahman' || o.customerName === 'Tahmina Begum')) {
+                    return false;
+                  }
+                  return true;
+                });
+              }
+            } catch (e) {
+              parsedOrders = [];
+            }
+          }
+          orders.value = parsedOrders;
+          localStorage.setItem('homeaura_orders', JSON.stringify(orders.value));
 
           const storedDeletedOrders = localStorage.getItem('homeaura_deleted_orders');
           deletedOrders.value = storedDeletedOrders ? JSON.parse(storedDeletedOrders) : [];
@@ -667,11 +765,27 @@
           categories.value = parsedCats;
           if (!storedCats) localStorage.setItem('homeaura_categories', JSON.stringify(defaultCategories));
 
+          const fakeFactoryIds = new Set(['f1', 'f2', 'f3']);
           const storedFactories = localStorage.getItem('homeaura_factories');
-          let parsedFacs = storedFactories ? JSON.parse(storedFactories) : null;
-          if (!parsedFacs || parsedFacs.length === 0) parsedFacs = defaultFactories;
+          let parsedFacs = [];
+          if (storedFactories) {
+            try {
+              const loadedFacs = JSON.parse(storedFactories);
+              if (Array.isArray(loadedFacs)) {
+                parsedFacs = loadedFacs.filter(f => {
+                  if (!f || !f.id) return false;
+                  if (fakeFactoryIds.has(String(f.id)) && (f.name === 'Apex Crafting Hub' || f.name === 'Royal Heritage Workshop' || f.name === 'Standard Guild Factory')) {
+                    return false;
+                  }
+                  return true;
+                });
+              }
+            } catch (e) {
+              parsedFacs = [];
+            }
+          }
           factories.value = parsedFacs;
-          if (!storedFactories) localStorage.setItem('homeaura_factories', JSON.stringify(defaultFactories));
+          localStorage.setItem('homeaura_factories', JSON.stringify(factories.value));
 
           const storedFactoryBills = localStorage.getItem('homeaura_factory_bills');
           factoryBills.value = storedFactoryBills ? JSON.parse(storedFactoryBills) : [];
@@ -1856,11 +1970,31 @@
         };
 
         const submitNewOrder = async () => {
-          const newId = 'ORD-' + (1000 + orders.value.length + 1);
+          let maxNum = 1000;
+          orders.value.forEach(o => {
+            if (o && o.id) {
+              const m = String(o.id).match(/ORD-(\d+)/i);
+              if (m) {
+                const num = parseInt(m[1], 10);
+                if (!isNaN(num) && num > maxNum) maxNum = num;
+              }
+            }
+          });
+          deletedOrders.value.forEach(o => {
+            if (o && o.id) {
+              const m = String(o.id).match(/ORD-(\d+)/i);
+              if (m) {
+                const num = parseInt(m[1], 10);
+                if (!isNaN(num) && num > maxNum) maxNum = num;
+              }
+            }
+          });
+          const nextOrderNum = maxNum + 1;
+          const newId = 'ORD-' + nextOrderNum;
           const timestamp = getBangladeshTimeString(new Date());
           const sellerUsername = currentUser.value ? currentUser.value.username : 'seller';
-          const autoCn = intakeForm.cnNumber || ('CN-' + (1000 + orders.value.length + 1));
-          const autoInv = intakeForm.invoiceNumber || ('INV-' + (1000 + orders.value.length + 1));
+          const autoCn = intakeForm.cnNumber || ('CN-' + nextOrderNum);
+          const autoInv = intakeForm.invoiceNumber || ('INV-' + nextOrderNum);
           const dateStr = getBangladeshDateString(new Date());
           const autoFileName = intakeForm.collagePhotoFileName || `collage_attachments/${sellerUsername}_${autoCn.replace(/[^a-zA-Z0-9-]/g, '')}_${autoInv.replace(/[^a-zA-Z0-9-]/g, '')}_${dateStr}.jpg`;
           
