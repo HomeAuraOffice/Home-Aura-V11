@@ -176,6 +176,7 @@
           return `${year}-${month}-${day}`;
         };
 
+        const getBstDateString = (isoOrDate) => { if (!isoOrDate) return ''; const d = new Date(isoOrDate); if (isNaN(d.getTime())) return ''; return new Date(d.getTime() + (6 * 60 * 60 * 1000)).toISOString().split('T')[0]; };
         const formatBangladeshDisplayTime = (isoOrDate) => {
           if (!isoOrDate) return 'N/A';
           try {
@@ -1490,13 +1491,15 @@
             if (dashboardFilter.dateRange !== 'all' && o.createdAt) {
               const orderDate = new Date(o.createdAt);
               const now = new Date();
+              const orderBst = getBstDateString(orderDate);
+              const nowBst = getBstDateString(now);
               if (dashboardFilter.dateRange === 'today') {
-                if (orderDate.toDateString() !== now.toDateString()) return false;
+                if (orderBst !== nowBst) return false;
               } else if (dashboardFilter.dateRange === 'week') {
                 const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
                 if (orderDate < oneWeekAgo) return false;
               } else if (dashboardFilter.dateRange === 'month') {
-                if (orderDate.getMonth() !== now.getMonth() || orderDate.getFullYear() !== now.getFullYear()) return false;
+                if (orderBst.substring(0, 7) !== nowBst.substring(0, 7)) return false;
               }
             }
             return true;
@@ -1627,9 +1630,11 @@
               if (!b.date) return true;
               const d = new Date(b.date);
               const now = new Date();
-              if (dashboardFilter.dateRange === 'today') return d.toDateString() === now.toDateString();
+              const dBst = getBstDateString(d);
+              const nowBst = getBstDateString(now);
+              if (dashboardFilter.dateRange === 'today') return dBst === nowBst;
               if (dashboardFilter.dateRange === 'week') return d >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-              if (dashboardFilter.dateRange === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+              if (dashboardFilter.dateRange === 'month') return dBst.substring(0, 7) === nowBst.substring(0, 7);
               return true;
             });
           }
@@ -1656,9 +1661,11 @@
               if (!e.date) return true;
               const d = new Date(e.date);
               const now = new Date();
-              if (dashboardFilter.dateRange === 'today') return d.toDateString() === now.toDateString();
+              const dBst = getBstDateString(d);
+              const nowBst = getBstDateString(now);
+              if (dashboardFilter.dateRange === 'today') return dBst === nowBst;
               if (dashboardFilter.dateRange === 'week') return d >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-              if (dashboardFilter.dateRange === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+              if (dashboardFilter.dateRange === 'month') return dBst.substring(0, 7) === nowBst.substring(0, 7);
               return true;
             });
           }
