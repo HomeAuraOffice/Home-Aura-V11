@@ -53,7 +53,7 @@
           return (Date.now() - new Date(timeStr).getTime()) < 5 * 60000;
         };
         
-        const newTask = reactive({ title: '', description: '', assigneeRole: 'all', assigneeId: '' });
+        const newTask = reactive({ title: '', description: '', assigneeRole: 'all', assigneeId: '', assigneeIds: [] });
         
         const markTaskDone = (task) => {
           task.status = 'completed';
@@ -85,6 +85,14 @@
         const isSidebarCollapsed = ref(false);
 
         const isTasksPanelOpen = ref(false);
+
+        const openTasksPanel = () => {
+          isTasksPanelOpen.value = true;
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+          }
+        };
+  
         const unreadNotificationsCount = computed(() => {
           if (!currentUser.value) return 0;
           return tasks.value.filter(t => t.status === 'pending' && (t.assigneeId === currentUser.value.id || t.assigneeRole === currentUser.value.role || t.assigneeRole === 'all')).length;
@@ -240,7 +248,48 @@
               if (q && q.changes && q.deletes) return q;
             }
           } catch(e) {}
-          return {
+          
+        // Browser Notifications for Tasks
+        let lastTaskIds = new Set(tasks.value.map(t => t.id));
+        watch(() => tasks.value, (newTasks) => {
+          if (!currentUser.value) return;
+          const currentTaskIds = new Set(newTasks.map(t => t.id));
+          
+          // Check for new tasks
+          const newAddedTasks = newTasks.filter(t => !lastTaskIds.has(t.id));
+          
+          newAddedTasks.forEach(task => {
+            // Check if task is for me
+            if (task.assigneeRole === 'all' || task.assigneeRole === currentUser.value.role || task.assigneeId === currentUser.value.id) {
+              // It's a new task for me!
+              // Ask for permission and notify
+              if (typeof window !== 'undefined' && 'Notification' in window) {
+                if (Notification.permission === 'granted') {
+                  new Notification('HomeAura: New Task Assigned', {
+                    body: task.title,
+                    icon: '/icon.png' // fallback if exists
+                  });
+                } else if (Notification.permission !== 'denied') {
+                  Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                      new Notification('HomeAura: New Task Assigned', {
+                        body: task.title
+                      });
+                    }
+                  });
+                }
+              }
+              // Also show in-app toast if toast exists
+              if (typeof showToast === 'function') {
+                showToast('New Task: ' + task.title, 'info');
+              }
+            }
+          });
+          
+          lastTaskIds = currentTaskIds;
+        }, { deep: true });
+
+        return {
             changes: {
               orders: {},
               deletedOrders: {},
@@ -4295,7 +4344,7 @@ function backupSpreadsheet() {
           openMarketingSpendModal, openMarketingSpendHistory, saveMarketingSpend, totalMarketingSpendToday,
           getBillOrdersTotalSale,
           getOrdersByIds,
-          factoryBills, isTasksPanelOpen, isUserOnline, newTask, createNewTask, markTaskDone, unreadNotificationsCount, tasks, notifications,
+          factoryBills, isTasksPanelOpen, openTasksPanel, isUserOnline, newTask, createNewTask, markTaskDone, unreadNotificationsCount, tasks, notifications,
           openAddBillModal,
           openEditBillModal,
           saveBillModal,
