@@ -43,6 +43,8 @@
         const factories = ref([]);
         const factoryBills = ref([]);
         const expenses = ref([]);
+        const marketingSpends = ref([]);
+        const marketingSpendFilterDate = ref(new Date().toISOString().split('T')[0]);
         const tasks = ref([]);
         const notifications = ref([]);
         const currentUser = ref(null);
@@ -70,7 +72,7 @@
             status: 'pending',
             assigneeRole: newTask.assigneeRole,
             assigneeId: newTask.assigneeId,
-            createdAt: new Date().toISOString()
+            createdAt: getBstIsoString()
           });
           syncQueue.value.changes.tasks = syncQueue.value.changes.tasks || {};
           syncQueue.value.changes.tasks[taskId] = true;
@@ -80,6 +82,7 @@
         };
 
         const activeTab = ref('dashboard');
+        const isSidebarCollapsed = ref(false);
 
         const isTasksPanelOpen = ref(false);
         const unreadNotificationsCount = computed(() => {
@@ -108,7 +111,7 @@
                        assigneeRole: 'seller',
                        assigneeId: order.merchantId,
                        orderId: order.id,
-                       createdAt: new Date().toISOString()
+                       createdAt: getBstIsoString()
                     });
                     syncQueue.value.changes.tasks = syncQueue.value.changes.tasks || {};
                     syncQueue.value.changes.tasks[taskId] = true;
@@ -176,6 +179,20 @@
           return `${year}-${month}-${day}`;
         };
 
+        const getBstIsoString = (dateInput = new Date()) => {
+          const d = new Date(dateInput);
+          if (isNaN(d.getTime())) return getBstIsoString();
+          const pad = (n) => String(n).padStart(2, '0');
+          const dhakaStr = d.toLocaleString('en-US', { timeZone: 'Asia/Dhaka', hour12: false });
+          const dhakaDate = new Date(dhakaStr);
+          const year = dhakaDate.getFullYear();
+          const month = pad(dhakaDate.getMonth() + 1);
+          const day = pad(dhakaDate.getDate());
+          const hours = pad(dhakaDate.getHours());
+          const minutes = pad(dhakaDate.getMinutes());
+          const seconds = pad(dhakaDate.getSeconds());
+          return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+06:00`;
+        };
         const getBstDateString = (isoOrDate) => { if (!isoOrDate) return ''; const d = new Date(isoOrDate); if (isNaN(d.getTime())) return ''; return new Date(d.getTime() + (6 * 60 * 60 * 1000)).toISOString().split('T')[0]; };
         const formatBangladeshDisplayTime = (isoOrDate) => {
           if (!isoOrDate) return 'N/A';
@@ -295,9 +312,9 @@
         // Helper: Stamp entity with ISO timestamp and author
         const stampEntity = (entity) => {
           if (!entity) return entity;
-          entity.updatedAt = new Date().toISOString();
+          entity.updatedAt = getBstIsoString();
           if (currentUser.value?.username) {
-            entity.updatedBy = currentUser.value.username;
+            entity.updatedBy = currentUser.value?.username;
           }
           return entity;
         };
@@ -353,9 +370,9 @@
 
         const pushToGoogleSheets = async (forceFull = false, isUserTriggered = false) => {
           if (currentUser.value) {
-            const myU = users.value.find(u => u && u.username === currentUser.value.username);
+            const myU = users.value.find(u => u && u?.username === currentUser.value?.username);
             if (myU) {
-              myU.lastActive = new Date().toISOString();
+              myU.lastActive = getBstIsoString();
               syncQueue.value.changes.users = syncQueue.value.changes.users || {};
               syncQueue.value.changes.users[myU.id] = true;
             }
@@ -381,7 +398,7 @@
               action: 'sync_full',
               delta: false,
               sender: currentUser.value?.username || 'user',
-              clientTimestamp: new Date().toISOString(),
+              clientTimestamp: getBstIsoString(),
               users: users.value,
               orders: orders.value,
               deletedOrders: deletedOrders.value,
@@ -396,7 +413,7 @@
               action: 'sync_delta',
               delta: true,
               sender: currentUser.value?.username || 'user',
-              clientTimestamp: new Date().toISOString(),
+              clientTimestamp: getBstIsoString(),
               changes: {
                 orders: Object.values(queueSnapshot.changes.orders || {}),
                 deletedOrders: Object.values(queueSnapshot.changes.deletedOrders || {}),
@@ -599,15 +616,15 @@
             // 3. Users Merge
             if (Array.isArray(data.users) && data.users.length > 0) {
               const userMap = new Map();
-              data.users.forEach(u => { if (u && u.username) userMap.set(String(u.username), u); });
+              data.users.forEach(u => { if (u && u?.username) userMap.set(String(u?.username), u); });
               const newUsersList = [];
               const processedUsernames = new Set();
 
               data.users.forEach(remoteU => {
-                if (!remoteU || !remoteU.username) return;
-                const uname = String(remoteU.username);
+                if (!remoteU || !remoteU?.username) return;
+                const uname = String(remoteU?.username);
                 processedUsernames.add(uname);
-                const localU = users.value.find(u => u && String(u.username) === uname);
+                const localU = users.value.find(u => u && String(u?.username) === uname);
                 if (localU) {
                   if (!syncQueue.value.changes.users || !syncQueue.value.changes.users[localU.id]) {
                     Object.assign(localU, remoteU);
@@ -913,6 +930,8 @@
           factoryBills.value = storedFactoryBills ? JSON.parse(storedFactoryBills) : [];
 
           const storedExpenses = localStorage.getItem('homeaura_expenses');
+          const storedSpends = localStorage.getItem('homeaura_marketing_spends');
+          if (storedSpends) { try { marketingSpends.value = JSON.parse(storedSpends); } catch (e) {} }
           expenses.value = storedExpenses ? JSON.parse(storedExpenses) : [];
 
           let storedWa = localStorage.getItem('homeaura_admin_wa');
@@ -930,8 +949,8 @@
           if (storedSession) {
             try {
               const user = JSON.parse(storedSession);
-              if (!user || !user.username) throw new Error('Invalid session');
-              const freshUser = users.value.find(u => u && u.username === user.username);
+              if (!user || !user?.username) throw new Error('Invalid session');
+              const freshUser = users.value.find(u => u && u?.username === user?.username);
               if (freshUser && freshUser.active) {
                 currentUser.value = freshUser;
                 activeTab.value = (freshUser.role === 'admin' || freshUser.role === 'marketer' || freshUser.role === 'moderator') ? 'dashboard' : 'intake';
@@ -1023,7 +1042,7 @@
 
         // Modals
         const activeModal = ref(null);
-        const modalData = reactive({ title: '', order: null, user: null, factory: null, bill: null, expense: null, selectedFactoryId: null, newStatus: '', url: '', confirmMessage: '', confirmButtonText: '', confirmButtonClass: '', onConfirm: null });
+        const modalData = reactive({ title: '', order: null, user: null, factory: null, bill: null, expense: null, marketingSpend: { date: "", sellerId: "", amount: 0, history: [] }, selectedFactoryId: null, newStatus: '', url: '', confirmMessage: '', confirmButtonText: '', confirmButtonClass: '', onConfirm: null });
         const trackingData = ref(null);
         const isLoadingTracking = ref(false);
 
@@ -1183,10 +1202,10 @@
 
         const processCollageFile = async (file, targetObj = intakeForm) => {
           if (!file || !file.type.startsWith('image/')) return;
-          const sellerUsername = currentUser.value ? currentUser.value.username : 'seller';
+          const sellerUsername = currentUser.value ? currentUser.value?.username : 'seller';
           const rawCn = targetObj.cnNumber || 'NOCN';
           const cleanCn = rawCn.replace(/[^a-zA-Z0-9-]/g, '');
-          const dateStr = targetObj.timestamp ? targetObj.timestamp.slice(0, 10) : new Date().toISOString().slice(0, 10);
+          const dateStr = targetObj.timestamp ? targetObj.timestamp.slice(0, 10) : getBstIsoString().slice(0, 10);
           const fileName = `collage_${sellerUsername}_${cleanCn}_${dateStr}.png`;
 
           if (targetObj === intakeForm) {
@@ -1275,10 +1294,10 @@
 
         const processProofFile = async (file, targetObj = intakeForm) => {
           if (!file || !file.type.startsWith('image/')) return;
-          const sellerUsername = currentUser.value ? currentUser.value.username : 'seller';
+          const sellerUsername = currentUser.value ? currentUser.value?.username : 'seller';
           const rawCn = targetObj.cnNumber || 'NOCN';
           const cleanCn = rawCn.replace(/[^a-zA-Z0-9-]/g, '');
-          const dateStr = targetObj.timestamp ? targetObj.timestamp.slice(0, 10) : new Date().toISOString().slice(0, 10);
+          const dateStr = targetObj.timestamp ? targetObj.timestamp.slice(0, 10) : getBstIsoString().slice(0, 10);
           const fileName = `proof_${sellerUsername}_${cleanCn}_${dateStr}.png`;
 
           if (targetObj === intakeForm) {
@@ -1405,7 +1424,7 @@
           const currIdx = pipelineStages.indexOf(order.status);
           if (currIdx !== -1 && currIdx < pipelineStages.length - 1) {
             order.status = pipelineStages[currIdx + 1];
-            order.updatedAt = new Date().toISOString();
+            order.updatedAt = getBstIsoString();
             order.updatedBy = currentUser.value?.username || 'seller';
             queueChange('orders', order);
             saveOrdersLocally();
@@ -1448,7 +1467,7 @@
         // --- AUTHENTICATION ---
         const handleLogin = () => {
           loginError.value = '';
-          const user = users.value.find(u => u && String(u.username) === String(loginForm.username) && String(u.password) === String(loginForm.password));
+          const user = users.value.find(u => u && String(u?.username) === String(loginForm?.username) && String(u.password) === String(loginForm.password));
           if (!user) {
             loginError.value = 'Invalid username or password.';
             return;
@@ -1517,6 +1536,19 @@
         });
 
         const sellersList = computed(() => users.value.filter(u => u && (u.role === 'seller' || u.role === 'moderator')));
+        const globalSalesProgress = computed(() => {
+          const allSellers = users.value.filter(u => u && u.role === 'seller');
+          const target = allSellers.reduce((sum, u) => sum + (Number(u.target) || 0), 0);
+          
+          const now = new Date();
+          // get current month using local Bangladesh time if possible, or just local ISO string
+          const currentMonth = getBstIsoString().slice(0, 7); 
+          const thisMonthOrders = orders.value.filter(o => o.timestamp && o.timestamp.startsWith(currentMonth) && o.status !== 'Void' && o.status !== 'Returned Received');
+          
+          const sales = thisMonthOrders.reduce((sum, o) => sum + (o.saleAmount || 0), 0);
+          const percentage = target > 0 ? Math.min(100, Math.round((sales / target) * 100)) : 0;
+          return { target, sales, percentage };
+        });
         const dispatchDeskOrders = computed(() => {
           return orders.value.filter(o => o.status !== 'Delivered' && o.status !== 'Returned Received').sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
         });
@@ -1586,7 +1618,7 @@
             const target = seller.target || 300000;
             const percentage = target > 0 ? Math.round((totalSales / target) * 100) : 0;
             return {
-              username: seller.username,
+              username: seller?.username,
               name: seller.name,
               totalOrders: sellerOrders.length,
               totalSales,
@@ -2360,32 +2392,69 @@
         const copyBothPhotosToClipboard = async (url1, url2, orderObj = null) => {
           return { success: false, result: null };
         };
-        const DO_NOT_CALL = async () => {
+        const fetchImageAsBlob = async (url) => {
+          if (!url) return null;
           try {
-            const targetOrders = orderObj ? [orderObj] : [{
-              id: 'NEW-ORDER',
-              fabric: intakeForm.fabric || 'Fabric',
-              productCategory: intakeForm.productCategory || 'Item',
-              seatConfig: intakeForm.seatConfig || '',
-              customerName: intakeForm.customerName || 'Customer',
-              customerPhone: intakeForm.customerPhone || '',
-              customerAddress: intakeForm.customerAddress || '',
-              collagePhotoUrl: url2 || '',
-              socialProofUrl: url1 || ''
-            }];
-
-            const pngResult = await generateOrdersCompositePng(targetOrders, 'HOMEAURA ORDER ATTACHMENT');
-            if (pngResult && pngResult.blob) {
-              const copied = await writePngBlobToClipboard(pngResult.blob);
-              return { success: copied, result: pngResult };
-            }
-            return { success: false, result: null };
-          } catch (err) {
-            console.error("Clipboard copy failed:", err);
-            return { success: false, result: null };
+            const res = await fetch(url);
+            if (!res.ok) throw new Error("Fetch failed");
+            return await res.blob();
+          } catch (e) {
+            console.warn("Fetch failed, trying canvas fallback:", url);
+            return new Promise((resolve) => {
+              const img = new Image();
+              img.crossOrigin = "anonymous";
+              img.onload = () => {
+                const canvas = document.createElement("canvas");
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0);
+                canvas.toBlob(resolve, "image/png");
+              };
+              img.onerror = () => resolve(null);
+              img.src = url;
+            });
           }
         };
 
+        const writeMultipleBlobsToClipboard = async (blobs, textMsg = '') => {
+          const validBlobs = blobs.filter(b => b);
+          if (validBlobs.length === 0) {
+            if (textMsg) {
+              await navigator.clipboard.writeText(textMsg);
+              return true;
+            }
+            return false;
+          }
+          try {
+            let copied = false;
+            const copyHandler = (e) => {
+              validBlobs.forEach((b, i) => {
+                e.clipboardData.items.add(new File([b], `image_${i}.png`, { type: b.type || 'image/png' }));
+              });
+              if (textMsg) e.clipboardData.setData('text/plain', textMsg);
+              e.preventDefault();
+              copied = true;
+            };
+            document.addEventListener('copy', copyHandler, { once: true });
+            document.execCommand('copy');
+            if (copied) return true;
+          } catch (e) {
+            console.warn('execCommand copy failed, falling back to Clipboard API', e);
+          }
+          try {
+            if (navigator.clipboard && navigator.clipboard.write && window.ClipboardItem) {
+               const b = validBlobs[0];
+               const items = { [b.type || 'image/png']: b };
+               if (textMsg) items['text/plain'] = new Blob([textMsg], { type: 'text/plain' });
+               await navigator.clipboard.write([new ClipboardItem(items)]);
+               return true;
+            }
+          } catch (e) {
+            console.warn('Clipboard API write failed', e);
+          }
+          return false;
+        };
         const submitNewOrder = async () => {
           let maxNum = 1000;
           orders.value.forEach(o => {
@@ -2408,10 +2477,10 @@
           });
           const nextOrderNum = maxNum + 1;
           const newId = 'ORD-' + nextOrderNum;
-          const timestamp = getBangladeshTimeString(new Date());
-          const sellerUsername = currentUser.value ? currentUser.value.username : 'seller';
-          const autoCn = intakeForm.cnNumber || ('CN-' + nextOrderNum);
-          const autoInv = intakeForm.invoiceNumber || ('INV-' + nextOrderNum);
+          const timestamp = getBstIsoString();
+          const sellerUsername = currentUser.value ? currentUser.value?.username : 'seller';
+          const autoCn = intakeForm.cnNumber || ("CN-" + nextOrderNum);
+          const autoInv = intakeForm.invoiceNumber || ("INV-" + nextOrderNum);
           const dateStr = getBangladeshDateString(new Date());
           const autoFileName = intakeForm.collagePhotoFileName || `collage_attachments/${sellerUsername}_${autoCn.replace(/[^a-zA-Z0-9-]/g, '')}_${autoInv.replace(/[^a-zA-Z0-9-]/g, '')}_${dateStr}.jpg`;
           
@@ -2444,8 +2513,8 @@
             socialProofFileName: intakeForm.socialProofFileName || '',
             extraDetails: intakeForm.extraDetails || '',
             factoryTag: intakeForm.factoryTag || '',
-            updatedAt: new Date().toISOString(),
-            updatedBy: currentUser.value ? currentUser.value.username : 'seller'
+            updatedAt: getBstIsoString(),
+            updatedBy: currentUser.value ? currentUser.value?.username : 'seller'
           };
           
           const proofUrlToCopy = intakeForm.socialProofUrl;
@@ -2499,41 +2568,26 @@
           let hasCopiedTextAndImage = false;
 
           try {
-            const pngRes = await generateOrdersCompositePng([newOrder], 'HOMEAURA ORDER ATTACHMENT');
-            if (pngRes && pngRes.blob) {
-              hasCopiedTextAndImage = await writePngBlobToClipboard(pngRes.blob, waText);
-              hasCopiedPhotos = hasCopiedTextAndImage;
-              generatedPngData = pngRes;
-              
-              uploadCompositePngToDrive(pngRes.dataUrl, `order_manifest_${newOrder.id}.png`).then(url => {
-                if (url) {
-                  const targetOrder = orders.value.find(o => o.id === newOrder.id);
-                  if (targetOrder) {
-                    targetOrder.dispatchManifestUrl = url;
-                    queueChange('orders', targetOrder);
-                    saveOrdersLocally();
-                  }
-                }
-              });
-            }
+            const blob1 = await fetchImageAsBlob(newOrder.collagePhotoUrl);
+            const blob2 = await fetchImageAsBlob(newOrder.socialProofUrl);
+            hasCopiedTextAndImage = await writeMultipleBlobsToClipboard([blob1, blob2], waText);
+            hasCopiedPhotos = hasCopiedTextAndImage;
             if (!hasCopiedTextAndImage) {
               await navigator.clipboard.writeText(waText);
               hasCopiedTextAndImage = true;
             }
           } catch (err) {
-            console.error('Clipboard copy failed:', err);
+            console.error("Clipboard copy failed:", err);
             try {
               await navigator.clipboard.writeText(waText);
               hasCopiedTextAndImage = true;
             } catch (e2) {}
           }
-
           orderSuccessData.order = newOrder;
           orderSuccessData.hasCopiedPhotos = hasCopiedPhotos;
-          orderSuccessData.compositePngUrl = generatedPngData ? generatedPngData.dataUrl : '';
-          orderSuccessData.previewPngUrl = generatedPngData ? generatedPngData.dataUrl : '';
-          orderSuccessData.compositePngBlob = generatedPngData ? generatedPngData.blob : null;
-          orderSuccessData.previewBlob = generatedPngData ? generatedPngData.blob : null;
+          orderSuccessData.compositePngUrl = "";
+          orderSuccessData.previewPngUrl = "";
+          orderSuccessData.compositePngBlob = null;
           orderSuccessData.waGroupLink = (adminWaGroupLink.value || '').trim() || DEFAULT_WA_GROUP_LINK;
           orderSuccessData.formattedSummary = waText;
           orderSuccessData.isCopiedText = hasCopiedTextAndImage;
@@ -2555,7 +2609,7 @@
             return;
           }
           order.status = newStatus;
-          order.updatedAt = new Date().toISOString();
+          order.updatedAt = getBstIsoString();
           order.updatedBy = currentUser.value?.username || 'seller';
           queueChange('orders', order);
           saveOrdersLocally();
@@ -2567,7 +2621,7 @@
             return;
           }
           order.urgent = !order.urgent;
-          order.updatedAt = new Date().toISOString();
+          order.updatedAt = getBstIsoString();
           order.updatedBy = currentUser.value?.username || 'seller';
           queueChange('orders', order);
           saveOrdersLocally();
@@ -2620,7 +2674,7 @@
             factoryBills.value.push(billToSave);
           }
 
-          billToSave.updatedAt = new Date().toISOString();
+          billToSave.updatedAt = getBstIsoString();
           billToSave.updatedBy = currentUser.value?.username || 'admin';
           queueChange('factoryBills', billToSave);
           saveFactoryBillsLocally();
@@ -2648,7 +2702,7 @@
             return;
           }
           modalData.expense.id = 'EXP-' + Date.now().toString().slice(-6);
-          modalData.expense.updatedAt = new Date().toISOString();
+          modalData.expense.updatedAt = getBstIsoString();
           modalData.expense.updatedBy = currentUser.value?.username || 'admin';
           const savedExp = { ...modalData.expense };
           expenses.value.push(savedExp);
@@ -2723,7 +2777,7 @@
             facToSave = { ...modalData.factory };
             factories.value.push(facToSave);
           }
-          facToSave.updatedAt = new Date().toISOString();
+          facToSave.updatedAt = getBstIsoString();
           facToSave.updatedBy = currentUser.value?.username || 'admin';
           queueChange('factories', facToSave);
           saveFactoriesLocally();
@@ -2739,29 +2793,27 @@
         };
 
         const getWhatsAppPayloadText = (order, factoryId) => {
-          if (!order) return '';
+          if (!order) return "";
           const targetFactory = factories.value.find(f => f.id === factoryId) || factories.value[0];
-          const factoryName = targetFactory ? targetFactory.name : 'Factory Partner';
-
+          const factoryName = targetFactory ? targetFactory.name : "Factory Partner";
           let payload = `🏭 *HOMEAURA PRODUCTION ORDER DISPATCH*\n`;
-          payload += `------------------------------------\n`;
-          payload += `*Target Factory:* ${factoryName}\n`;
-          payload += `*Order Ref:* ${order.id}\n`;
-          payload += `*Consignment No (CN):* ${order.cnNumber || 'N/A'}\n`;
-          payload += `*Factory Invoice No:* ${order.invoiceNumber || 'N/A'}\n`;
-          payload += `*Date:* ${order.timestamp}\n`;
-          payload += `*Product:* ${order.productCategory} (${order.seatConfig})\n`;
-          payload += `*Fabric:* ${order.fabric}\n`;
-          payload += `*Client Name:* ${order.customerName}\n`;
-          payload += `*Client Contact:* ${order.customerPhone}\n`;
-          payload += `*Delivery Address:* ${order.customerAddress}\n`;
-          if (order.extraDetails) payload += `*Fabric & Specs:* ${order.extraDetails}\n`;
-          if (order.notes) payload += `*Special Notes:* ${order.notes}\n`;
-          if (order.collagePhotoFileName) payload += `*Local Attachment:* ${order.collagePhotoFileName}\n`;
-          if (order.collagePhotoUrl && !order.collagePhotoUrl.startsWith('data:')) payload += `*Collage Photo Link:* ${order.collagePhotoUrl}\n`;
-          payload += `------------------------------------\n`;
-          payload += `Please confirm fabric stock & production timeline.`;
-
+          payload += `━━━━━━━━━━━━━━━━━━━━━\n`;
+          payload += `🏭 *Target Factory:* ${factoryName}\n`;
+          payload += `🆔 *Order Ref:* ${order.id}\n`;
+          payload += `📑 *Consignment No (CN):* ${order.cnNumber || "N/A"}\n`;
+          payload += `🧾 *Factory Invoice No:* ${order.invoiceNumber || "N/A"}\n`;
+          payload += `📅 *Date:* ${order.timestamp}\n`;
+          payload += `🛋️ *Product:* ${order.productCategory} (${order.seatConfig})\n`;
+          payload += `🧵 *Fabric:* ${order.fabric}\n`;
+          payload += `👤 *Client Name:* ${order.customerName}\n`;
+          payload += `📞 *Client Contact:* ${order.customerPhone}\n`;
+          payload += `📍 *Delivery Address:* ${order.customerAddress}\n`;
+          if (order.extraDetails) payload += `🔍 *Fabric & Specs:* ${order.extraDetails}\n`;
+          if (order.notes) payload += `📝 *Special Notes:* ${order.notes}\n`;
+          if (order.collagePhotoFileName) payload += `🖼️ *Local Attachment:* ${order.collagePhotoFileName}\n`;
+          if (order.collagePhotoUrl && !order.collagePhotoUrl.startsWith("data:")) payload += `🖼️ *Collage Photo Link:* ${order.collagePhotoUrl}\n`;
+          if (order.socialProofUrl && !order.socialProofUrl.startsWith("data:")) payload += `📸 *Payment Proof Link:* ${order.socialProofUrl}\n`;
+          payload += `━━━━━━━━━━━━━━━━━━━━━\n`;
           return payload;
         };
 
@@ -2775,7 +2827,7 @@
           if (realOrder) {
             realOrder.factoryTag = targetFactory.name;
             realOrder.status = 'Factory Submit';
-            realOrder.updatedAt = new Date().toISOString();
+            realOrder.updatedAt = getBstIsoString();
             realOrder.updatedBy = currentUser.value?.username || 'user';
             queueChange('orders', realOrder);
             saveOrdersLocally();
@@ -2793,34 +2845,29 @@
           }
 
           let hasCopiedTextAndImage = false;
-          let generatedPng = null;
           try {
-            const pngRes = await generateOrdersCompositePng([order], `DISPATCH: ${targetFactory.name.toUpperCase()}`);
-            if (pngRes && pngRes.blob) {
-              hasCopiedTextAndImage = await writePngBlobToClipboard(pngRes.blob, messageText);
-              generatedPng = pngRes;
-            }
+            const blob1 = await fetchImageAsBlob(order.collagePhotoUrl);
+            const blob2 = await fetchImageAsBlob(order.socialProofUrl);
+            hasCopiedTextAndImage = await writeMultipleBlobsToClipboard([blob1, blob2], messageText);
             if (!hasCopiedTextAndImage) {
               await navigator.clipboard.writeText(messageText);
               hasCopiedTextAndImage = true;
             }
           } catch (err) {
-            console.error('Clipboard copy failed:', err);
+            console.error("Clipboard copy failed:", err);
             try {
               await navigator.clipboard.writeText(messageText);
               hasCopiedTextAndImage = true;
             } catch (e2) {}
           }
-
           bulkDispatchSuccessData.ordersCount = 1;
           bulkDispatchSuccessData.count = 1;
           bulkDispatchSuccessData.photoCount = (order.collagePhotoUrl ? 1 : 0) + (order.socialProofUrl ? 1 : 0);
           bulkDispatchSuccessData.factoryName = targetFactory.name;
           bulkDispatchSuccessData.waGroupLink = waUrl;
-          bulkDispatchSuccessData.compositePngUrl = generatedPng ? generatedPng.dataUrl : '';
-          bulkDispatchSuccessData.previewPngUrl = generatedPng ? generatedPng.dataUrl : '';
-          bulkDispatchSuccessData.compositePngBlob = generatedPng ? generatedPng.blob : null;
-          bulkDispatchSuccessData.previewBlob = generatedPng ? generatedPng.blob : null;
+          bulkDispatchSuccessData.previewPngUrl = "";
+          bulkDispatchSuccessData.compositePngBlob = null;
+          bulkDispatchSuccessData.previewBlob = null;
           bulkDispatchSuccessData.hasCopiedPhotos = hasCopiedTextAndImage;
           bulkDispatchSuccessData.manifestText = messageText;
           bulkDispatchSuccessData.isCopiedText = false;
@@ -2903,30 +2950,18 @@
           let hasCopiedPhotos = false;
           let pngResult = null;
           try {
-            pngResult = await generateOrdersCompositePng(selectedList, `BULK DISPATCH: ${targetFactory.name.toUpperCase()}`);
-            if (pngResult && pngResult.blob) {
-              hasCopiedPhotos = await writePngBlobToClipboard(pngResult.blob);
-
-              const ts = Date.now();
-              uploadCompositePngToDrive(pngResult.dataUrl, `bulk_dispatch_${targetFactory.id}_${ts}.png`).then(url => {
-                if (url) {
-                  selectedList.forEach(order => {
-                    const targetOrder = orders.value.find(o => o.id === order.id);
-                    if (targetOrder) {
-                      targetOrder.dispatchManifestUrl = url;
-                      queueChange('orders', targetOrder);
-                    }
-                  });
-                  saveOrdersLocally();
-                }
-              });
-            }
+            const allUrls = [];
+            selectedList.forEach(o => {
+               if(o.collagePhotoUrl) allUrls.push(o.collagePhotoUrl);
+               if(o.socialProofUrl) allUrls.push(o.socialProofUrl);
+            });
+            const blobs = await Promise.all(allUrls.map(url => fetchImageAsBlob(url)));
+            hasCopiedPhotos = await writeMultipleBlobsToClipboard(blobs);
           } catch (err) {
-            console.warn('Notice generating bulk composite PNG:', err.message);
+            console.warn("Notice fetching bulk images:", err.message);
           }
-
           // Update status of all selected orders in local state and queue for delta sync
-          const nowIso = new Date().toISOString();
+          const nowIso = getBstIsoString();
           selectedList.forEach(ord => {
             ord.factoryTag = targetFactory.name;
             ord.status = 'Factory Submit';
@@ -2959,22 +2994,14 @@
           bulkDispatchSuccessData.hasCopiedPhotos = hasCopiedPhotos;
           bulkDispatchSuccessData.manifestText = manifestText;
           try {
-            const pngRes = await generateOrdersCompositePng(selectedList, 'HOMEAURA FACTORY DISPATCH MANIFEST');
-            if (pngRes && pngRes.blob) {
-              const copied = await writePngBlobToClipboard(pngRes.blob, manifestText);
-              bulkDispatchSuccessData.isCopiedText = copied;
-              bulkDispatchSuccessData.compositePngUrl = pngRes.dataUrl;
-              bulkDispatchSuccessData.compositePngBlob = pngRes.blob;
-              if (!copied) await navigator.clipboard.writeText(manifestText);
-            } else {
-              await navigator.clipboard.writeText(manifestText);
-              bulkDispatchSuccessData.isCopiedText = true;
-            }
+            await navigator.clipboard.writeText(manifestText);
+            bulkDispatchSuccessData.isCopiedText = true;
+            bulkDispatchSuccessData.compositePngUrl = "";
+            bulkDispatchSuccessData.compositePngBlob = null;
           } catch(e) {
-            console.error('Bulk Clipboard write error:', e);
+            console.error("Bulk Clipboard write error:", e);
             bulkDispatchSuccessData.isCopiedText = false;
           }
-
           // Clear selection
           selectedOrders.value.clear();
           bulkDispatchData.isGeneratingPng = false;
@@ -3004,7 +3031,7 @@
           const realOrder = orders.value.find(o => o.id === modalData.order.id);
           if (realOrder) {
             realOrder.status = modalData.newStatus;
-            realOrder.updatedAt = new Date().toISOString();
+            realOrder.updatedAt = getBstIsoString();
             realOrder.updatedBy = currentUser.value?.username || 'user';
             queueChange('orders', realOrder);
             saveOrdersLocally();
@@ -3119,7 +3146,7 @@
               }
             }
             modalData.order.totalAmount = (modalData.order.saleAmount || 0) + (modalData.order.deliveryCharge || 0);
-            modalData.order.updatedAt = new Date().toISOString();
+            modalData.order.updatedAt = getBstIsoString();
             modalData.order.updatedBy = currentUser.value?.username || 'user';
             orders.value[idx] = { ...modalData.order };
             queueChange('orders', orders.value[idx]);
@@ -3142,8 +3169,8 @@
         const executeVoidOrder = () => {
           const orderToVoid = orders.value.find(o => o.id === modalData.order.id);
           if (orderToVoid) {
-            orderToVoid.deletedAt = getBangladeshTimeString(new Date());
-            orderToVoid.updatedAt = new Date().toISOString();
+            orderToVoid.deletedAt = getBstIsoString();
+            orderToVoid.updatedAt = getBstIsoString();
             orderToVoid.updatedBy = currentUser.value?.username || 'user';
             deletedOrders.value.unshift(orderToVoid);
             orders.value = orders.value.filter(o => o.id !== modalData.order.id);
@@ -3163,7 +3190,7 @@
           }
           deletedOrders.value = deletedOrders.value.filter(o => o.id !== order.id);
           delete order.deletedAt;
-          order.updatedAt = new Date().toISOString();
+          order.updatedAt = getBstIsoString();
           order.updatedBy = currentUser.value?.username || 'user';
           orders.value.push(order);
           queueChange('orders', order);
@@ -3227,7 +3254,7 @@
             orders.value.forEach(o => {
               if (toDispatchIds.includes(o.id)) {
                 o.status = 'Dispatched';
-                o.updatedAt = new Date().toISOString();
+                o.updatedAt = getBstIsoString();
                 o.updatedBy = currentUser.value?.username || 'user';
                 queueChange('orders', o);
               }
@@ -3253,10 +3280,10 @@
           const toDeleteIds = Array.from(selectedOrders.value);
           const ordersToMove = orders.value.filter(o => toDeleteIds.includes(o.id));
           
-          const now = getBangladeshTimeString(new Date());
+          const now = getBstIsoString();
           ordersToMove.forEach(o => {
             o.deletedAt = now;
-            o.updatedAt = new Date().toISOString();
+            o.updatedAt = getBstIsoString();
             o.updatedBy = currentUser.value?.username || 'user';
             deletedOrders.value.unshift(o);
             queueChange('deletedOrders', o);
@@ -3300,6 +3327,46 @@
           }
         };
 
+        const instantBackupToDrive = async () => {
+          if (!appsScriptUrl.value) {
+            alert("Please configure the Apps Script URL first.");
+            return;
+          }
+          try {
+            const url = appsScriptUrl.value.trim();
+            isBackingUp.value = true;
+            const res = await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "text/plain;charset=utf-8" },
+              body: JSON.stringify({ action: "manual_backup" })
+            });
+            const text = await res.text();
+            let data;
+            try {
+              data = JSON.parse(text);
+            } catch (e) {
+              throw new Error("Server returned invalid JSON. Did you re-deploy as a NEW Web App and grant Drive permissions?");
+            }
+            if (data && data.status === "success") {
+              if (data.mode === "full") {
+                 alert("⚠️ Backup ignored! You are using an OLD version of the Apps Script.\n\nPlease click \"Copy Apps Script Code (V4)\", paste it in the Apps Script editor, and create a NEW deployment.");
+              } else {
+                 alert(data.message || "✅ Manual backup completed successfully!");
+              }
+            } else {
+              throw new Error(data.error || "Unknown error");
+            }
+          } catch(err) {
+            let msg = err.message;
+            if (msg.includes("permission") || msg.includes("DriveApp") || msg.includes("invalid JSON")) {
+                msg += "\n\n💡 FIX: Open your Google Sheet > Extensions > Apps Script. Select \"backupSpreadsheet\" from the top toolbar and click \"Run\" to trigger the Google Drive permission prompt. After granting access, click Deploy > New Deployment!";
+            }
+            alert("❌ Backup Failed:\n" + msg);
+          } finally {
+            isBackingUp.value = false;
+          }
+        };
+
         const saveAdminWaGroupLink = async () => {
           const linkToSave = (adminWaGroupLink.value || '').trim() || DEFAULT_WA_GROUP_LINK;
           adminWaGroupLink.value = linkToSave;
@@ -3327,7 +3394,7 @@
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 12000);
 
-            const testPayload = { _connectionTest: [{ timestamp: new Date().toISOString(), message: "HomeAura multi-user sync engine is online!" }] };
+            const testPayload = { _connectionTest: [{ timestamp: getBstIsoString(), message: "HomeAura multi-user sync engine is online!" }] };
             const res = await fetch(url, {
               method: 'POST',
               headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -3419,6 +3486,14 @@ function doPost(e) {
       try {
         setupBackupTrigger(payloadObj.hours);
         return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'Backup frequency set to ' + payloadObj.hours + ' hour(s).' })).setMimeType(ContentService.MimeType.JSON);
+      } catch(err) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    if (payloadObj.action === 'manual_backup') {
+      try {
+        backupSpreadsheet();
+        return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'Manual backup completed successfully!' })).setMimeType(ContentService.MimeType.JSON);
       } catch(err) {
         return ContentService.createTextOutput(JSON.stringify({ status: 'error', error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
       }
@@ -3626,11 +3701,11 @@ function distributeOrdersBySeller() {
   var validSellerUsernames = {};
   
   users.forEach(function(u) {
-    if (u && u.id && u.username) {
-      idToUsername[u.id] = u.username;
+    if (u && u.id && u?.username) {
+      idToUsername[u.id] = u?.username;
       // Only allocate individual sheets for sellers and moderators
       if (u.role === 'seller' || u.role === 'moderator') {
-        validSellerUsernames[u.username] = true;
+        validSellerUsernames[u?.username] = true;
       }
     }
   });
@@ -3718,7 +3793,7 @@ function backupSpreadsheet() {
             factories: factories.value,
             factoryBills: factoryBills.value,
             expenses: expenses.value,
-            timestamp: new Date().toISOString()
+            timestamp: getBstIsoString()
           };
           let dataToExport = JSON.stringify(snapshot, null, 2);
           let fileExt = 'json';
@@ -3813,13 +3888,13 @@ function backupSpreadsheet() {
         };
 
         const openEditUserModal = (user) => {
-          modalData.title = `Edit Profile: @${user.username}`;
+          modalData.title = `Edit Profile: @${user?.username}`;
           modalData.user = reactive({ ...user, visibleSellers: user.visibleSellers || [] });
           activeModal.value = 'userModal';
         };
 
         const saveUserModal = () => {
-          const idx = users.value.findIndex(u => u && u.username === modalData.user.username);
+          const idx = users.value.findIndex(u => u && u?.username === modalData.user?.username);
           let userToSave;
           if (idx !== -1) {
             users.value[idx] = { ...modalData.user };
@@ -3829,7 +3904,7 @@ function backupSpreadsheet() {
             userToSave = { ...modalData.user };
             users.value.push(userToSave);
           }
-          userToSave.updatedAt = new Date().toISOString();
+          userToSave.updatedAt = getBstIsoString();
           userToSave.updatedBy = currentUser.value?.username || 'admin';
           queueChange('users', userToSave);
           saveUsersLocally();
@@ -3838,7 +3913,7 @@ function backupSpreadsheet() {
 
         const toggleUserActive = (user) => {
           user.active = !user.active;
-          user.updatedAt = new Date().toISOString();
+          user.updatedAt = getBstIsoString();
           user.updatedBy = currentUser.value?.username || 'admin';
           queueChange('users', user);
           saveUsersLocally();
@@ -4042,12 +4117,12 @@ function backupSpreadsheet() {
         });
 
         // Watchers for Charts
-        watch(activeTab, (val) => {
-          if (val === 'dashboard') {
-            Vue.nextTick(() => {
+        watch([activeTab, isSidebarCollapsed], () => {
+          if (activeTab.value === 'dashboard') {
+            setTimeout(() => { // ensure DOM layout is updated
               renderChart();
               renderPieChart();
-            });
+            }, 50);
           }
         });
         
@@ -4144,7 +4219,80 @@ function backupSpreadsheet() {
           });
         });
 
+        const saveMarketingSpendsLocally = () => {
+          localStorage.setItem('homeaura_marketing_spends', JSON.stringify(marketingSpends.value));
+        };
+        const filteredMarketingSpends = computed(() => {
+          let list = marketingSpends.value.filter(s => s.date === marketingSpendFilterDate.value);
+          if (currentUser.value && currentUser.value.role === 'marketer' && currentUser.value.visibleSellers && currentUser.value.visibleSellers.length > 0) {
+            list = list.filter(s => currentUser.value.visibleSellers.includes(s.sellerId));
+          }
+          return list;
+        });
+
+        const openMarketingSpendModal = (spend = null) => {
+          if (spend) {
+            modalData.marketingSpend = { ...spend };
+          } else {
+            modalData.marketingSpend = {
+              date: marketingSpendFilterDate.value,
+              sellerId: '',
+              amount: 0,
+              history: []
+            };
+          }
+          activeModal.value = 'marketingSpendModal';
+        };
+
+        const openMarketingSpendHistory = (spend) => {
+          modalData.marketingSpend = { ...spend };
+          activeModal.value = 'marketingSpendHistoryModal';
+        };
+
+        const saveMarketingSpend = () => {
+          const spend = modalData.marketingSpend;
+          if (!spend.date || !spend.sellerId) return;
+          const ts = Date.now();
+          const recordHistory = {
+            timestamp: ts,
+            amount: spend.amount,
+            updatedBy: currentUser.value ? currentUser.value?.username : 'system'
+          };
+          if (spend.id) {
+            const idx = marketingSpends.value.findIndex(s => s.id === spend.id);
+            if (idx !== -1) {
+              const target = marketingSpends.value[idx];
+              target.amount = spend.amount;
+              target.updatedBy = recordHistory.updatedBy;
+              target.history = target.history || [];
+              target.history.unshift(recordHistory);
+            }
+          } else {
+            const existing = marketingSpends.value.find(s => s.date === spend.date && s.sellerId === spend.sellerId);
+            if (existing) {
+              existing.amount = spend.amount;
+              existing.updatedBy = recordHistory.updatedBy;
+              existing.history = existing.history || [];
+              existing.history.unshift(recordHistory);
+            } else {
+              spend.id = 'ms_' + ts + Math.random().toString(36).substr(2, 5);
+              spend.updatedBy = recordHistory.updatedBy;
+              spend.history = [recordHistory];
+              marketingSpends.value.push(spend);
+            }
+          }
+          saveMarketingSpendsLocally();
+          closeModal();
+        };
+
+        const totalMarketingSpendToday = computed(() => {
+          const today = new Date().toISOString().split('T')[0];
+          return marketingSpends.value.filter(s => s.date === today).reduce((sum, s) => sum + s.amount, 0);
+        });
         return {
+          formatBangladeshDisplayTime,
+          marketingSpends, marketingSpendFilterDate, filteredMarketingSpends,
+          openMarketingSpendModal, openMarketingSpendHistory, saveMarketingSpend, totalMarketingSpendToday,
           getBillOrdersTotalSale,
           getOrdersByIds,
           factoryBills, isTasksPanelOpen, isUserOnline, newTask, createNewTask, markTaskDone, unreadNotificationsCount, tasks, notifications,
@@ -4170,7 +4318,7 @@ function backupSpreadsheet() {
           handleCollagePaste,
           handleCollageDrop,
           selectProofTile,
-          activeTab,
+          activeTab, isSidebarCollapsed,
           loginForm,
           loginError,
           lastSyncTimestamp,
@@ -4183,7 +4331,7 @@ function backupSpreadsheet() {
           toggleAllSelection,
           bulkDeleteSelected,
           bulkDispatchSelected,
-          updateBackupFrequency,
+          updateBackupFrequency, instantBackupToDrive,
           backupFrequency,
           appsScriptUrl,
           isBackingUp,
@@ -4219,7 +4367,7 @@ function backupSpreadsheet() {
           intakeForm,
           activeModal,
           modalData,
-          metrics,
+          metrics, globalSalesProgress,
           sellersList,
           merchantStats, steadfastReport, dashboardFilter,
           factoryBillStats,
@@ -4288,7 +4436,9 @@ function backupSpreadsheet() {
           openBulkFactoryDispatchModal,
           executeBulkFactoryDispatch,
           copyBulkManifestText,
-          reCopyBulkPngToClipboard
+          reCopyBulkPngToClipboard,
+          marketingSpends, marketingSpendFilterDate, filteredMarketingSpends,
+          openMarketingSpendModal, openMarketingSpendHistory, saveMarketingSpend, totalMarketingSpendToday,
         };
       }
     }).mount('#app');
