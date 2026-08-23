@@ -33,6 +33,7 @@
         const defaultOrders = [];
 
         const defaultCategories = ['L-Shape Sofa', 'Sofa Set', 'Recliner Chair', 'Dining Table', 'Custom Bed', 'Living Room Accessories'];
+        const defaultFabrics = ['Velvet', 'PU Leather', 'Jute', 'Cotton', 'Linen'];
 
         // --- REACTIVE STATE MANAGEMENT ---
         const users = ref([]);
@@ -40,6 +41,8 @@
         const deletedOrders = ref([]);
         const selectedOrders = ref(new Set());
         const categories = ref([]);
+        const fabrics = ref([]);
+        const newFabricName = ref('');
         const factories = ref([]);
         const factoryBills = ref([]);
         const expenses = ref([]);
@@ -381,9 +384,7 @@
         const queueChange = (collection, entity) => {
           if (!entity) return;
           stampEntity(entity);
-          if (collection === 'categories') {
-            syncQueue.value.changes.categories = [...categories.value];
-          } else if (collection === 'settings') {
+          if (collection === 'categories') { syncQueue.value.changes.categories = [...categories.value]; } else if (collection === 'fabrics') { syncQueue.value.changes.fabrics = [...fabrics.value]; } else if (collection === 'settings') {
             if (!syncQueue.value.changes.settings) syncQueue.value.changes.settings = {};
             syncQueue.value.changes.settings[entity.id] = { ...entity };
           } else {
@@ -462,6 +463,7 @@
               orders: orders.value,
               deletedOrders: deletedOrders.value,
               categories: categories.value,
+            fabrics: fabrics.value,
               factories: factories.value,
               factoryBills: factoryBills.value,
               expenses: expenses.value,
@@ -485,6 +487,7 @@
                 tasks: Object.values(queueSnapshot.changes.tasks || {}),
                 notifications: Object.values(queueSnapshot.changes.notifications || {}),
                 categories: queueSnapshot.changes.categories,
+                fabrics: queueSnapshot.changes.fabrics,
                 settings: Object.values(queueSnapshot.changes.settings || {})
               },
               deletes: queueSnapshot.deletes || {}
@@ -546,9 +549,8 @@
                 Object.keys(queueSnapshot.changes.settings || {}).forEach(id => {
                   delete syncQueue.value.changes.settings[id];
                 });
-                if (queueSnapshot.changes.categories) {
-                  syncQueue.value.changes.categories = null;
-                }
+                if (queueSnapshot.changes.categories) { syncQueue.value.changes.categories = null; }
+                  if (queueSnapshot.changes.fabrics) { syncQueue.value.changes.fabrics = null; }
               }
               if (queueSnapshot.deletes) {
                 Object.keys(queueSnapshot.deletes).forEach(coll => {
@@ -559,7 +561,7 @@
             } else {
               // Reset queue after full sync
               syncQueue.value = {
-                changes: { orders: {}, deletedOrders: {}, users: {}, factories: {}, factoryBills: {}, expenses: {}, tasks: {}, notifications: {}, categories: null, settings: {} },
+                changes: { orders: {}, deletedOrders: {}, users: {}, factories: {}, factoryBills: {}, expenses: {}, tasks: {}, notifications: {}, categories: null, fabrics: null, settings: {} },
                 deletes: { orders: [], deletedOrders: [], users: [], factories: [], factoryBills: [], expenses: [], tasks: [], notifications: [] }
               };
             }
@@ -829,6 +831,10 @@
               categories.value = data.categories.map(c => typeof c === 'object' && c !== null ? (c.name || Object.values(c).join('')) : String(c));
               localStorage.setItem('homeaura_categories', JSON.stringify(categories.value));
             }
+            if (Array.isArray(data.fabrics) && data.fabrics.length > 0 && !syncQueue.value.changes.fabrics) {
+              fabrics.value = data.fabrics.map(c => typeof c === 'object' && c !== null ? (c.name || Object.values(c).join('')) : String(c));
+              localStorage.setItem('homeaura_fabrics', JSON.stringify(fabrics.value));
+            }
 
             
             // 9. Tasks Merge
@@ -972,6 +978,12 @@
           if (!parsedCats || parsedCats.length === 0) parsedCats = defaultCategories;
           categories.value = parsedCats;
           if (!storedCats) localStorage.setItem('homeaura_categories', JSON.stringify(defaultCategories));
+          
+          const storedFabs = localStorage.getItem('homeaura_fabrics');
+          let parsedFabs = storedFabs ? JSON.parse(storedFabs) : null;
+          if (!parsedFabs || parsedFabs.length === 0) parsedFabs = defaultFabrics;
+          fabrics.value = parsedFabs;
+          if (!storedFabs) localStorage.setItem('homeaura_fabrics', JSON.stringify(defaultFabrics));
 
           const fakeFactoryIds = new Set(['f1', 'f2', 'f3']);
           const storedFactories = localStorage.getItem('homeaura_factories');
@@ -1086,6 +1098,7 @@
         // Intake Form
         const clipboardRawText = ref('');
         const parseSuccessMsg = ref('');
+        const missingFieldsHighlight = ref(false);
         const intakeForm = reactive({
           customerName: '',
           customerPhone: '',
@@ -1839,207 +1852,49 @@
         });
 
         // --- OMNI-CLIPBOARD PARSER ENGINE ---
-                const parseClipboard = () => {
+        const parseClipboard = async () => {
           if (!clipboardRawText.value) return;
           const text = clipboardRawText.value;
-          let parsedCount = 0;
-
-          // Bengali numeral converter helper
-          const bnToEn = (str) => {
-            const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-            return str.replace(/[০-৯]/g, (match) => bnDigits.indexOf(match));
-          };
-
-          // 1. Phone parsing (Robust: allows spaces, dashes, +88 prefix)
-          const phoneMatch = text.match(/(?:\+?88\s*)?01[3-9](?:[\s-]*\d){8}/) || text.match(/[০-৯]{11}/);
-          if (phoneMatch) {
-            let cleanPhone = bnToEn(phoneMatch[0].replace(/[-\s+]/g, ''));
-            if (cleanPhone.startsWith('88') && cleanPhone.length > 11) {
-                cleanPhone = cleanPhone.substring(2);
-            }
-            if (cleanPhone.length >= 11) {
-               intakeForm.customerPhone = cleanPhone;
-               parsedCount++;
-            }
-          }
-
-          // 2. Name parsing (Extract until newline or phone/address keyword)
-          const nameMatch = text.match(/(?:name|customer|client|নাম|নামঃ)\s*[:=—-]*\s*([A-Za-z\s\u0980-\u09FF\.]+?)(?=\s*(?:\n|phone|mobile|address|ঠিকানা|ফোন|01[3-9]))/is) 
-                           || text.match(/(?:name|customer|client|নাম|নামঃ)\s*[:=—-]*\s*([A-Za-z\s\u0980-\u09FF\.]+)/i);
-          if (nameMatch) {
-            const cleanName = nameMatch[1].trim();
-            if (cleanName) {
-              intakeForm.customerName = cleanName;
-              parsedCount++;
-            }
-          }
-
-          // 3. Address parsing (Multi-line support until the next obvious key)
-          const addrMatch = text.match(/(?:address|location|ঠিকানা|ঠিকানাঃ)\s*[:=—-]*\s*(.*?)(?=\s*\n\s*[a-zA-Z\u0980-\u09FF]+[:=—-]|\n*$)/is);
-          if (addrMatch) {
-            const cleanAddr = addrMatch[1].replace(/[\r\n]+/g, ', ').trim();
-            if (cleanAddr) {
-              intakeForm.customerAddress = cleanAddr;
-              parsedCount++;
-            }
-          }
-
-          // 4. Design Code (e.g. RH-336)
-          const codeMatch = text.match(/[A-Za-z]{2,3}-\d{3,5}/);
-          if (codeMatch) {
-            const code = codeMatch[0].toUpperCase();
-            const designText = "Design: " + code;
-            if (!intakeForm.extraDetails.includes(code)) {
-                intakeForm.extraDetails = intakeForm.extraDetails ? intakeForm.extraDetails + ", " + designText : designText;
-                parsedCount++;
-            }
-          }
-
-          // 5. Traffic Source
-          if (/messenger|fb\s|facebook/i.test(text)) {
-            intakeForm.trafficSource = 'Messenger';
-            parsedCount++;
-          } else if (/whatsapp|wa\s|wa\./i.test(text)) {
-            intakeForm.trafficSource = 'WhatsApp';
-            parsedCount++;
-          } else if (/call|phone|direct/i.test(text)) {
-            intakeForm.trafficSource = 'Direct Call';
-            parsedCount++;
-          } else if (/insta|ig\s/i.test(text)) {
-            intakeForm.trafficSource = 'Instagram';
-            parsedCount++;
-          }
-
-          // 6. Seat Config (English & Bengali)
-          const engSeatMatch = text.match(/([1-9])[- ]*seater/i);
-          const bnSofaMatch = text.match(/(?:সোফা|sofa|সিট|seat)\s*[:=—-]*\s*([\u0980-\u09FF0-9\+]+)/i);
           
-          if (engSeatMatch) {
-            intakeForm.seatConfig = engSeatMatch[1] + '-Seater';
-            parsedCount++;
-          } else if (/l-shape|l shape|এল শেপ/i.test(text)) {
-            intakeForm.seatConfig = 'L-Shape';
-            parsedCount++;
-          } else if (bnSofaMatch) {
-            intakeForm.seatConfig = bnSofaMatch[1].trim();
-            parsedCount++;
-          }
-
-          // 7. Product Category
-          const catMatch = text.match(/(sofa|bed|divan|wardrobe|dining|table|chair|mattress|সোফা|খাট|ডিভান|ওয়ারড্রোব|ডাইনিং)/i);
-          if (catMatch) {
-             const cat = catMatch[1].toLowerCase();
-             if (cat.includes('sofa') || cat.includes('সোফা')) intakeForm.productCategory = 'Sofa';
-             else if (cat.includes('bed') || cat.includes('খাট')) intakeForm.productCategory = 'Bed';
-             else if (cat.includes('divan') || cat.includes('ডিভান')) intakeForm.productCategory = 'Divan';
-             else if (cat.includes('dining') || cat.includes('ডাইনিং')) intakeForm.productCategory = 'Dining';
-             else intakeForm.productCategory = catMatch[1];
-             parsedCount++;
-          }
-
-          // 8. Fabric
-          const fabricMatch = text.match(/(?:fabric|cloth|কাপড়)\s*[:=—-]*\s*([A-Za-z\s\u0980-\u09FF]+?)(?=\n|$)/i) 
-                           || text.match(/(velvet|pu leather|leather|cotton|linen|jute|suade|সুইড|ভেলভেট|চামড়া)/i);
-          if (fabricMatch) {
-            intakeForm.fabric = fabricMatch[1].trim();
-            parsedCount++;
-          }
-
-          // 9. Pricing & Delivery Charge
-          const priceMatch = text.match(/(?:price|sale|cost|প্রাইস|মূল্য)\s*[:=—-]*\s*([0-9,\u09e6-\u09ef]+)/i) 
-                          || text.match(/([0-9\u09e6-\u09ef]{4,7})\s*(?:tk|টাকা|\/-|bdt)/i);
-          if (priceMatch) {
-            const cleanPrice = bnToEn(priceMatch[1].replace(/,/g, ''));
-            if (!isNaN(cleanPrice)) {
-                intakeForm.saleAmount = parseInt(cleanPrice, 10);
-                parsedCount++;
-            }
-          }
-
-          const delMatch = text.match(/(?:del|delivery|charge|ডেলিভারি চার্জ|ডেলিভারি)\s*[:=—-]*\s*([0-9,\u09e6-\u09ef]+)/i);
-          if (delMatch) {
-            const cleanDel = bnToEn(delMatch[1].replace(/,/g, ''));
-            if (!isNaN(cleanDel)) {
-                intakeForm.deliveryCharge = parseInt(cleanDel, 10);
-                parsedCount++;
-            }
-          }
-
-          // 10. Color & Extra Details
-          const colorMatch = text.match(/(?:color|কালার|রং)\s*[:=—-]*\s*([A-Za-z\s\u0980-\u09FF]+?)(?=\s*(?:\n|price|del|size|fabric|কাপড়|প্রাইস))/is)
-                          || text.match(/(?:color|কালার|রং)\s*[:=—-]*\s*([A-Za-z\s\u0980-\u09FF]+)/i);
-          if (colorMatch) {
-            const cleanColor = colorMatch[1].trim();
-            if (cleanColor) {
-               const colorText = "Color: " + cleanColor;
-               if (!intakeForm.extraDetails.includes(colorText)) {
-                   intakeForm.extraDetails = intakeForm.extraDetails ? intakeForm.extraDetails + ", " + colorText : colorText;
-                   parsedCount++;
-               }
-            }
-          }
-
-          // 11. Size / Dimensions
-          const sizeMatch = text.match(/(?:size|মাপ|সাইজ)\s*[:=—-]*\s*([A-Za-z0-9\s\'\"\u0980-\u09FF\*\+]+?)(?=\s*(?:\n|price|del|color))/is);
-          if (sizeMatch) {
-            const cleanSize = sizeMatch[1].trim();
-            if (cleanSize) {
-               const sizeText = "Size: " + cleanSize;
-               if (!intakeForm.extraDetails.includes(sizeText)) {
-                   intakeForm.extraDetails = intakeForm.extraDetails ? intakeForm.extraDetails + ", " + sizeText : sizeText;
-                   parsedCount++;
-               }
-            }
-          }
-
-          // 12. Urgent / Expedited
-          if (/urgent|asap|emergency|fast delivery|জরুরী|তাড়াতাড়ি/i.test(text)) {
-            intakeForm.urgent = true;
-            const urgentText = "URGENT ORDER";
-            if (!intakeForm.notes.includes(urgentText)) {
-                intakeForm.notes = intakeForm.notes ? urgentText + " - " + intakeForm.notes : urgentText;
-            }
-            parsedCount++;
-          }
-
-          // 13. Advanced/Paid Amount (Inject into Notes)
-          const advMatch = text.match(/(?:adv|advance|paid|বুকিং মানি|বুকিং|অগ্রিম)\s*[:=—-]*\s*([0-9,\u09e6-\u09ef]+)/i);
-          if (advMatch) {
-            const cleanAdv = bnToEn(advMatch[1].replace(/,/g, ''));
-            const advText = "Advance Paid: " + cleanAdv + " Tk";
-            if (!intakeForm.notes.includes("Advance Paid")) {
-                intakeForm.notes = intakeForm.notes ? intakeForm.notes + "\n" + advText : advText;
-                parsedCount++;
-            }
-          }
-
-          // 14. Courier / Fulfillment
-          const cnMatch = text.match(/(?:cn|consignment|courier id)\s*[:=—-]*\s*([A-Za-z0-9-]+)/i);
-          if (cnMatch) {
-            intakeForm.cnNumber = cnMatch[1].toUpperCase();
-            parsedCount++;
-          }
-
-          const invMatch = text.match(/(?:inv|invoice|bill)\s*[:=—-]*\s*([A-Za-z0-9-]+)/i);
-          if (invMatch) {
-            intakeForm.invoiceNumber = invMatch[1].toUpperCase();
-            parsedCount++;
-          }
+          parseSuccessMsg.value = `✨ Analyzing text with Omni-Clipboard AI...`;
           
-          if (/SFC|steadfast/i.test(text)) {
-            intakeForm.fulfillmentMethod = 'Steadfast Courier';
-          } else if (/redx/i.test(text)) {
-            intakeForm.fulfillmentMethod = 'RedX Delivery';
-          } else if (/pathao/i.test(text)) {
-            intakeForm.fulfillmentMethod = 'Pathao';
-          } else if (/pickup|নিজস্ব|দোকান থেকে/i.test(text)) {
-            intakeForm.fulfillmentMethod = 'Pickup';
-          } else {
-            intakeForm.fulfillmentMethod = 'Steadfast Courier'; // Default fallback
+          try {
+            const res = await fetch('/api/parse-clipboard', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ text })
+            });
+            
+            if (!res.ok) {
+              throw new Error('Failed to parse');
+            }
+            
+            const data = await res.json();
+            
+            let parsedCount = 0;
+            const keys = [
+              'customerName', 'customerPhone', 'customerAddress', 'trafficSource',
+              'fabric', 'productCategory', 'seatConfig', 'fulfillmentMethod',
+              'saleAmount', 'deliveryCharge', 'urgent', 'notes', 'cnNumber',
+              'invoiceNumber', 'extraDetails', 'factoryTag'
+            ];
+            
+            keys.forEach(k => {
+              if (data[k] !== undefined && data[k] !== null && data[k] !== '') {
+                intakeForm[k] = data[k];
+                parsedCount++;
+              }
+            });
+            
+            parseSuccessMsg.value = `✨ AI successfully parsed ${parsedCount} fields!`;
+            missingFieldsHighlight.value = true;
+            setTimeout(() => { parseSuccessMsg.value = ''; }, 4000);
+          } catch (err) {
+            parseSuccessMsg.value = `❌ Failed to parse using AI.`;
+            setTimeout(() => { parseSuccessMsg.value = ''; }, 4000);
           }
-
-          parseSuccessMsg.value = `✨ Parsed ${parsedCount} fields automatically from pasted message!`;
-          setTimeout(() => { parseSuccessMsg.value = ''; }, 4000);
         };
 
 
@@ -2618,10 +2473,11 @@
           return false;
         };
         const submitNewOrder = async () => {
+          missingFieldsHighlight.value = false;
           let maxNum = 1000;
           orders.value.forEach(o => {
             if (o && o.id) {
-              const m = String(o.id).match(/ORD-(\d+)/i);
+              const m = String(o.id).match(/-(\d+)/i);
               if (m) {
                 const num = parseInt(m[1], 10);
                 if (!isNaN(num) && num > maxNum) maxNum = num;
@@ -2630,7 +2486,7 @@
           });
           deletedOrders.value.forEach(o => {
             if (o && o.id) {
-              const m = String(o.id).match(/ORD-(\d+)/i);
+              const m = String(o.id).match(/-(\d+)/i);
               if (m) {
                 const num = parseInt(m[1], 10);
                 if (!isNaN(num) && num > maxNum) maxNum = num;
@@ -2638,11 +2494,12 @@
             }
           });
           const nextOrderNum = maxNum + 1;
-          const newId = 'ORD-' + nextOrderNum;
+          const customPrefix = (currentUser.value && currentUser.value.pagePrefix && currentUser.value.pagePrefix.trim() !== '') ? currentUser.value.pagePrefix.trim().toUpperCase() : 'ORD';
+          const newId = customPrefix + '-' + nextOrderNum;
           const timestamp = getBstIsoString();
           const sellerUsername = currentUser.value ? currentUser.value?.username : 'seller';
           const autoCn = intakeForm.cnNumber || ("CN-" + nextOrderNum);
-          const autoInv = intakeForm.invoiceNumber || ("INV-" + nextOrderNum);
+          const autoInv = intakeForm.invoiceNumber || (customPrefix + "-INV-" + nextOrderNum);
           const dateStr = getBangladeshDateString(new Date());
           const autoFileName = intakeForm.collagePhotoFileName || `collage_attachments/${sellerUsername}_${autoCn.replace(/[^a-zA-Z0-9-]/g, '')}_${autoInv.replace(/[^a-zA-Z0-9-]/g, '')}_${dateStr}.jpg`;
           
@@ -3229,6 +3086,19 @@
           }
         };
 
+        // --- FABRICS ---
+        const addFabric = () => {
+          if (newFabricName.value && !fabrics.value.includes(newFabricName.value)) {
+            fabrics.value.push(newFabricName.value);
+            queueChange('fabrics', fabrics.value);
+            localStorage.setItem('homeaura_fabrics', JSON.stringify(fabrics.value));
+            newFabricName.value = '';
+          }
+        };
+        const removeFabric = (index) => { openGlobalConfirm('Are you sure you want to remove this fabric?', 'Remove Fabric', 'bg-rose-600 hover:bg-rose-500 text-white', () => { fabrics.value.splice(index, 1); queueChange('fabrics', fabrics.value);
+            localStorage.setItem('homeaura_fabrics', JSON.stringify(fabrics.value));
+            closeModal(); }); };
+
         // --- CATEGORIES ---
         const addCategory = () => {
           if (newCategoryName.value && !categories.value.includes(newCategoryName.value)) {
@@ -3239,11 +3109,7 @@
           }
         };
 
-        const removeCategory = (index) => {
-          categories.value.splice(index, 1);
-          queueChange('categories', categories.value);
-          saveCategoriesLocally();
-        };
+        const removeCategory = (index) => { openGlobalConfirm('Are you sure you want to remove this category?', 'Remove Category', 'bg-rose-600 hover:bg-rose-500 text-white', () => { categories.value.splice(index, 1); queueChange('categories', categories.value); saveCategoriesLocally(); closeModal(); }); };
 
         // --- CSV EXPORT ---
         const exportCSV = () => {
@@ -3606,6 +3472,10 @@ function doGet(e) {
     var categories = rawCategories.map(function(c) {
       return typeof c === 'object' && c !== null ? (c.name || Object.values(c).join('')) : String(c);
     });
+    var rawFabrics = sheetToObjects("fabrics");
+    var fabrics = rawFabrics.map(function(c) {
+      return typeof c === 'object' && c !== null ? (c.name || Object.values(c).join('')) : String(c);
+    });
     var data = {
       status: 'success',
       serverTimestamp: new Date().toISOString(),
@@ -3613,6 +3483,7 @@ function doGet(e) {
       orders: sheetToObjects("orders"),
       deletedOrders: sheetToObjects("deletedOrders"),
       categories: categories,
+      fabrics: fabrics,
       factories: sheetToObjects("factories"),
       factoryBills: sheetToObjects("factoryBills"),
       expenses: sheetToObjects("expenses"),
@@ -3676,6 +3547,11 @@ function doPost(e) {
         objectsToSheetAtomic("categories", catObjs);
         stats.updatedRecords += catObjs.length;
       }
+      if (changes.fabrics && Array.isArray(changes.fabrics)) {
+        var fabObjs = changes.fabrics.map(function(c) { return { name: typeof c === 'object' && c !== null ? (c.name || Object.values(c).join('')) : String(c) }; });
+        objectsToSheetAtomic("fabrics", fabObjs);
+        stats.updatedRecords += fabObjs.length;
+      }
       Object.keys(deletes).forEach(function(sheetName) {
         var idsToDelete = deletes[sheetName];
         if (idsToDelete && idsToDelete.length > 0) stats.deletedRecords += deleteObjectsById(sheetName, idsToDelete);
@@ -3694,6 +3570,10 @@ function doPost(e) {
     if (payloadObj.categories && Array.isArray(payloadObj.categories)) {
       var catObjs2 = payloadObj.categories.map(function(c) { return { name: typeof c === 'object' && c !== null ? (c.name || Object.values(c).join('')) : String(c) }; });
       objectsToSheetAtomic("categories", catObjs2);
+    }
+    if (payloadObj.fabrics && Array.isArray(payloadObj.fabrics)) {
+      var fabObjs2 = payloadObj.fabrics.map(function(c) { return { name: typeof c === 'object' && c !== null ? (c.name || Object.values(c).join('')) : String(c) }; });
+      objectsToSheetAtomic("fabrics", fabObjs2);
     }
     logHistory(payloadObj, stats);
     try { distributeOrdersBySeller(); } catch(e) {}
@@ -3952,6 +3832,7 @@ function backupSpreadsheet() {
             orders: orders.value,
             deletedOrders: deletedOrders.value,
             categories: categories.value,
+              fabrics: fabrics.value,
             factories: factories.value,
             factoryBills: factoryBills.value,
             expenses: expenses.value,
@@ -4015,6 +3896,8 @@ function backupSpreadsheet() {
                 orders.value = snapshot.orders;
                 deletedOrders.value = snapshot.deletedOrders || [];
                 categories.value = snapshot.categories || [];
+                fabrics.value = snapshot.fabrics || [];
+                localStorage.setItem('homeaura_fabrics', JSON.stringify(fabrics.value));
                 factories.value = snapshot.factories || [];
                 factoryBills.value = snapshot.factoryBills || [];
                 expenses.value = snapshot.expenses || [];
@@ -4045,7 +3928,7 @@ function backupSpreadsheet() {
         // --- USER PROFILE MANAGEMENT ---
         const openAddUserModal = () => {
           modalData.title = 'Register New User Profile';
-          modalData.user = reactive({ name: '', username: '', password: '1234', role: 'seller', active: true, target: 300000, visibleSellers: [] });
+          modalData.user = reactive({ name: '', username: '', password: '1234', role: 'seller', active: true, target: 300000, visibleSellers: [], pagePrefix: '' });
           modalData.showPassword = false;
           activeModal.value = 'userModal';
         };
@@ -4553,6 +4436,7 @@ function backupSpreadsheet() {
           handleLogin,
           handleLogout,
           parseClipboard,
+          missingFieldsHighlight,
           submitNewOrder,
           quickStatusChange,
           toggleUrgent,
@@ -4563,6 +4447,10 @@ function backupSpreadsheet() {
           getAllowedStatusesForUser,
           advanceSellerStatus,
           getStatusStyle,
+          fabrics,
+          newFabricName,
+          addFabric,
+          removeFabric,
           addCategory,
           removeCategory,
           exportCSV,

@@ -18,6 +18,14 @@
       0% { background-position: 0 0; }
       100% { background-position: 1rem 0; }
     }
+  
+    /* Smooth Theme Cross-Fade */
+    html, body, *, *::before, *::after {
+      transition-property: background-color, border-color, color, fill, stroke !important;
+      transition-duration: 500ms !important;
+      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
   </style>
   <script>
     tailwind.config = {
@@ -380,18 +388,34 @@
               <span v-if="unreadNotificationsCount > 0" class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white ring-2 ring-white dark:ring-slate-900 shadow-sm">{{ unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount }}</span>
             </button>
 
-            <!-- Top Dark Mode Button -->
+                        <!-- Top Dark Mode Button -->
             <button @click="toggleDarkMode" type="button" :title="isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
-                    class="px-3 py-1.5 rounded-xl border transition-all text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    class="relative overflow-hidden px-3 py-1.5 rounded-xl border transition-all duration-500 text-xs font-bold flex items-center gap-2 shadow-xs cursor-pointer group"
                     :class="isDarkMode ? 'bg-slate-800 text-amber-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-indigo-700 border-slate-200 hover:bg-indigo-50'">
-              <span v-if="isDarkMode" class="flex items-center gap-1">
-                <span>☀️</span>
-                <span class="hidden sm:inline">Light Mode</span>
-              </span>
-              <span v-else class="flex items-center gap-1">
-                <span></span>
-                <span class="hidden sm:inline">Dark Mode</span>
-              </span>
+              
+              <!-- Icon Container -->
+              <div class="relative w-4 h-4 flex items-center justify-center">
+                <span class="absolute inset-0 flex items-center justify-center transition-all duration-500 transform"
+                      :class="isDarkMode ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-50'">
+                  ☀️
+                </span>
+                <span class="absolute inset-0 flex items-center justify-center transition-all duration-500 transform"
+                      :class="isDarkMode ? 'opacity-0 rotate-90 scale-50' : 'opacity-100 rotate-0 scale-100'">
+                  🌙
+                </span>
+              </div>
+              
+              <!-- Text Container -->
+              <div class="relative overflow-hidden hidden sm:block w-[72px] h-[16px]">
+                <span class="absolute inset-0 flex items-center transition-all duration-500 transform"
+                      :class="isDarkMode ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'">
+                  Light Mode
+                </span>
+                <span class="absolute inset-0 flex items-center transition-all duration-500 transform"
+                      :class="isDarkMode ? 'opacity-0 -translate-y-4' : 'opacity-100 translate-y-0'">
+                  Dark Mode
+                </span>
+              </div>
             </button>
 
             <div class="text-right hidden sm:block">
@@ -1680,9 +1704,7 @@
                   </div>
                 </div>
 
-                <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Paste multi-line text scraped directly from client conversations. Our heuristic regex scanner will automatically detect phone numbers, design codes (<code class="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-indigo-600 dark:text-indigo-400">RH-</code>), pricing, source signatures, and seat configs.
-                </p>
+                
 
                 <textarea v-model="clipboardRawText" @paste="handleProofPaste($event, intakeForm)" rows="7" placeholder="Paste chat text here (or paste screenshot directly)...
 e.g.
@@ -1717,14 +1739,14 @@ Price: 65000 tk, Del: 2500"
                     <!-- Customer Name -->
                     <div>
                       <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Customer Name *</label>
-                      <input v-model="intakeForm.customerName" type="text" required placeholder="e.g. Far Ha Na"
+                      <input v-model="intakeForm.customerName" type="text" required placeholder="e.g. Far Ha Na" :class="{'ring-2 ring-amber-400 bg-amber-50/50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600': missingFieldsHighlight && !intakeForm.customerName}"
                              class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30" />
                     </div>
 
                     <!-- Customer Phone -->
                     <div>
                       <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mobile Vector (Phone) *</label>
-                      <input v-model="intakeForm.customerPhone" type="text" required placeholder="e.g. 01711223344"
+                      <input v-model="intakeForm.customerPhone" type="text" required placeholder="e.g. 01711223344" :class="{'ring-2 ring-amber-400 bg-amber-50/50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600': missingFieldsHighlight && !intakeForm.customerPhone}"
                              class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30" />
                     </div>
                   </div>
@@ -1732,7 +1754,7 @@ Price: 65000 tk, Del: 2500"
                   <!-- Shipping Address -->
                   <div>
                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Shipping Address *</label>
-                    <textarea v-model="intakeForm.customerAddress" required rows="2" placeholder="Full delivery address with area & district"
+                    <textarea v-model="intakeForm.customerAddress" required rows="2" placeholder="Full delivery address with area & district" :class="{'ring-2 ring-amber-400 bg-amber-50/50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600': missingFieldsHighlight && !intakeForm.customerAddress}"
                               class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"></textarea>
                   </div>
 
@@ -1744,7 +1766,7 @@ Price: 65000 tk, Del: 2500"
                         <span class="text-[10px] text-slate-400 dark:text-slate-500 font-normal">(Courier tracking)</span>
                       </label>
                       <input v-model="intakeForm.cnNumber" type="text" placeholder="e.g. CN-882049"
-                             class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30" />
+                             class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30" :class="{'ring-2 ring-amber-400 bg-amber-50/50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600': missingFieldsHighlight && !intakeForm.cnNumber}"  />
                     </div>
 
                     <!-- Factory Invoice Number -->
@@ -1754,7 +1776,7 @@ Price: 65000 tk, Del: 2500"
                         <span class="text-[10px] text-slate-400 dark:text-slate-500 font-normal">(Factory bill ref)</span>
                       </label>
                       <input v-model="intakeForm.invoiceNumber" type="text" placeholder="e.g. INV-2026-041"
-                             class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30" />
+                             class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30" :class="{'ring-2 ring-amber-400 bg-amber-50/50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600': missingFieldsHighlight && !intakeForm.invoiceNumber}"  />
                     </div>
                   </div>
 
@@ -1762,7 +1784,7 @@ Price: 65000 tk, Del: 2500"
                     <!-- Traffic Source -->
                     <div>
                       <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Traffic Source</label>
-                      <select v-model="intakeForm.trafficSource" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 font-medium focus:outline-none">
+                      <select v-model="intakeForm.trafficSource" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 font-medium focus:outline-none" :class="{'ring-2 ring-amber-400 bg-amber-50/50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600': missingFieldsHighlight && !intakeForm.trafficSource}" >
                         <option value="Messenger">Messenger</option>
                         <option value="WhatsApp">WhatsApp</option>
                         <option value="Direct Call">Direct Call</option>
@@ -1774,14 +1796,14 @@ Price: 65000 tk, Del: 2500"
                     <!-- Product Category -->
                     <div>
                       <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Product Category</label>
-                      <select v-model="intakeForm.productCategory" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 font-medium focus:outline-none">
+                      <select v-model="intakeForm.productCategory" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 font-medium focus:outline-none" :class="{'ring-2 ring-amber-400 bg-amber-50/50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600': missingFieldsHighlight && !intakeForm.productCategory}" >
                         <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
                       </select>
                     </div>
                     <!-- Fabric -->
                     <div>
                       <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Fabric *</label>
-                      <select v-model="intakeForm.fabric" required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 font-medium focus:outline-none">
+                      <select v-model="intakeForm.fabric" required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 font-medium focus:outline-none" :class="{'ring-2 ring-amber-400 bg-amber-50/50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600': missingFieldsHighlight && !intakeForm.fabric}" >
                         <option disabled value="">Select Fabric...</option>
                         <option v-for="f in fabrics" :key="f" :value="f">{{ f }}</option>
                       </select>
@@ -1792,7 +1814,7 @@ Price: 65000 tk, Del: 2500"
                     <!-- Seat Configuration -->
                     <div>
                       <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Seat Configuration</label>
-                      <select v-model="intakeForm.seatConfig" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 font-medium focus:outline-none">
+                      <select v-model="intakeForm.seatConfig" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 font-medium focus:outline-none" :class="{'ring-2 ring-amber-400 bg-amber-50/50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600': missingFieldsHighlight && !intakeForm.seatConfig}" >
                         <option value="1-Seater">1-Seater</option>
                         <option value="2-Seater">2-Seater</option>
                         <option value="3-Seater">3-Seater</option>
@@ -1804,7 +1826,7 @@ Price: 65000 tk, Del: 2500"
                     <!-- Fulfillment Method -->
                     <div>
                       <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Fulfillment Method</label>
-                      <select v-model="intakeForm.fulfillmentMethod" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 font-medium focus:outline-none">
+                      <select v-model="intakeForm.fulfillmentMethod" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 font-medium focus:outline-none" :class="{'ring-2 ring-amber-400 bg-amber-50/50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600': missingFieldsHighlight && !intakeForm.fulfillmentMethod}" >
                         <option value="Home Delivery">Home Delivery</option>
                         <option value="Courier Service">Courier Service</option>
                       </select>
@@ -1815,14 +1837,14 @@ Price: 65000 tk, Del: 2500"
                   <div class="p-4 bg-indigo-50/50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900 rounded-xl grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Sale Amount (BDT)</label>
-                      <input v-model.number="intakeForm.saleAmount" type="number" min="0" placeholder="0"
+                      <input v-model.number="intakeForm.saleAmount" type="number" min="0" placeholder="0" :class="{'ring-2 ring-amber-400 bg-amber-50/50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600': missingFieldsHighlight && (!intakeForm.saleAmount || intakeForm.saleAmount === 0)}"
                              class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none" />
                     </div>
 
                     <div>
                       <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Delivery Charge (BDT)</label>
                       <input v-model.number="intakeForm.deliveryCharge" type="number" min="0" placeholder="0"
-                             class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none" />
+                             class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none" :class="{'ring-2 ring-amber-400 bg-amber-50/50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600': missingFieldsHighlight && (intakeForm.deliveryCharge === null || intakeForm.deliveryCharge === undefined || intakeForm.deliveryCharge === '')}"  />
                     </div>
 
                     <div>
@@ -1981,7 +2003,7 @@ Price: 65000 tk, Del: 2500"
                   <!-- Extra Production & Fabric Details -->
                   <div>
                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Extra Design & Fabric Specifications (For Factory & WhatsApp)</label>
-                    <textarea v-model="intakeForm.extraDetails" rows="2" placeholder="e.g. Royal Blue Velvet upholstery, high-density 32-count foam, brass metal feet"
+                    <textarea v-model="intakeForm.extraDetails" rows="2" placeholder="e.g. Royal Blue Velvet upholstery, high-density 32-count foam, brass metal feet" :class="{'ring-2 ring-amber-400 bg-amber-50/50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600': missingFieldsHighlight && !intakeForm.extraDetails}"
                               class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"></textarea>
                   </div>
 
@@ -1989,7 +2011,7 @@ Price: 65000 tk, Del: 2500"
                   <div>
                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Special Order Notes</label>
                     <input v-model="intakeForm.notes" type="text" placeholder="General customer notes or delivery timing request..."
-                           class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none" />
+                           class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none" :class="{'ring-2 ring-amber-400 bg-amber-50/50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600': missingFieldsHighlight && !intakeForm.notes}"  />
                   </div>
 
                   <button type="submit" class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/20 transition-all">
@@ -2952,6 +2974,10 @@ Price: 65000 tk, Del: 2500"
                   <option value="marketer">Digital Marketer</option>
                   <option value="admin">Admin</option>
                 </select>
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Order Prefix (e.g. PL for Prime Living)</label>
+                <input v-model="modalData.user.pagePrefix" type="text" placeholder="Optional" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none uppercase" />
               </div>
                                                         <div v-if="modalData.user.role === 'seller' || modalData.user.role === 'moderator'">
                 <label class="flex items-center space-x-3 cursor-pointer mt-4 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
