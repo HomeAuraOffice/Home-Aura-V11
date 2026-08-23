@@ -57,6 +57,8 @@
         
         const markTaskDone = (task) => {
           task.status = 'completed';
+          task.completedAt = getBstIsoString();
+          task.completedBy = currentUser.value?.name || currentUser.value?.username || 'Unknown';
           syncQueue.value.changes.tasks = syncQueue.value.changes.tasks || {};
           queueChange('tasks', task);
           saveSyncQueue();
@@ -335,6 +337,8 @@
             count += Object.keys(ch.factories || {}).length;
             count += Object.keys(ch.factoryBills || {}).length;
             count += Object.keys(ch.expenses || {}).length;
+            count += Object.keys(ch.tasks || {}).length;
+            count += Object.keys(ch.notifications || {}).length;
             count += Object.keys(ch.settings || {}).length;
             if (ch.categories) count += 1;
           }
@@ -345,6 +349,8 @@
             count += (del.factories || []).length;
             count += (del.factoryBills || []).length;
             count += (del.expenses || []).length;
+            count += (del.tasks || []).length;
+            count += (del.notifications || []).length;
           }
           return count;
         });
@@ -425,7 +431,9 @@
             const myU = users.value.find(u => u && u?.username === currentUser.value?.username);
             if (myU) {
               myU.lastActive = getBstIsoString();
-              queueChange('users', myU);
+              syncQueue.value.changes.users = syncQueue.value.changes.users || {};
+              syncQueue.value.changes.users[myU.id] = { ...myU };
+              saveSyncQueue();
             }
           }
           if (!appsScriptUrl.value) return;
