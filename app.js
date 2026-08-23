@@ -1549,7 +1549,7 @@
         // --- AUTHENTICATION ---
         const handleLogin = () => {
           loginError.value = '';
-          const user = users.value.find(u => u && String(u?.username) === String(loginForm?.username) && String(u.password) === String(loginForm.password));
+          const user = users.value.find(u => u && String(u?.username || '').trim().toLowerCase() === String(loginForm?.username || '').trim().toLowerCase() && String(u?.password || '').trim() === String(loginForm?.password || '').trim());
           if (!user) {
             loginError.value = 'Invalid username or password.';
             return;
