@@ -368,6 +368,7 @@
         const isBackingUp = ref(false);
         const isPushing = ref(false);
         const isPulling = ref(false);
+        const isInitialLoad = ref(true);
         const isAuthenticating = ref(false);
         const isTestingSync = ref(false);
 
@@ -4201,7 +4202,7 @@ function backupSpreadsheet() {
           loadInitialData();
           
           // Initial non-destructive background pull
-          syncFromGoogleSheets();
+          syncFromGoogleSheets().finally(() => { isInitialLoad.value = false; });
 
           if (activeTab.value === 'dashboard') {
             Vue.nextTick(() => {
@@ -4213,21 +4214,21 @@ function backupSpreadsheet() {
           // Dynamic polling (12s when visible, 60s when hidden)
           let pollInterval = setInterval(() => {
             if (appsScriptUrl.value && !document.hidden && navigator.onLine) {
-              syncFromGoogleSheets();
+              syncFromGoogleSheets().finally(() => { isInitialLoad.value = false; });
             }
           }, 12000);
 
           // Visibility change listener
           document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-              syncFromGoogleSheets();
+              syncFromGoogleSheets().finally(() => { isInitialLoad.value = false; });
             }
           });
 
           // Window Focus listener
           window.addEventListener('focus', () => {
             if (navigator.onLine) {
-              syncFromGoogleSheets();
+              syncFromGoogleSheets().finally(() => { isInitialLoad.value = false; });
             }
           });
 
@@ -4237,7 +4238,7 @@ function backupSpreadsheet() {
             syncNotice.value = '🌐 Connection restored! Syncing data...';
             setTimeout(() => { syncNotice.value = ''; }, 3000);
             triggerAutoSync(true);
-            syncFromGoogleSheets();
+            syncFromGoogleSheets().finally(() => { isInitialLoad.value = false; });
           });
 
           window.addEventListener('offline', () => {
@@ -4399,6 +4400,7 @@ function backupSpreadsheet() {
           isPulling,
           isTestingSync,
           isAuthenticating,
+          isInitialLoad,
           syncStatus,
           syncNotice,
           syncStatusMsg,
