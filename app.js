@@ -58,7 +58,7 @@
         const markTaskDone = (task) => {
           task.status = 'completed';
           syncQueue.value.changes.tasks = syncQueue.value.changes.tasks || {};
-          syncQueue.value.changes.tasks[task.id] = true;
+          queueChange('tasks', task);
           saveSyncQueue();
         };
 
@@ -75,7 +75,7 @@
             createdAt: getBstIsoString()
           });
           syncQueue.value.changes.tasks = syncQueue.value.changes.tasks || {};
-          syncQueue.value.changes.tasks[taskId] = true;
+          queueChange('tasks', tasks.value.find(t => t.id === taskId));
           saveSyncQueue();
           newTask.title = '';
           newTask.description = '';
@@ -122,7 +122,7 @@
                        createdAt: getBstIsoString()
                     });
                     syncQueue.value.changes.tasks = syncQueue.value.changes.tasks || {};
-                    syncQueue.value.changes.tasks[taskId] = true;
+                    queueChange('tasks', tasks.value.find(t => t.id === taskId));
                     changed = true;
                  }
               }
@@ -455,6 +455,7 @@
               factories: factories.value,
               factoryBills: factoryBills.value,
               expenses: expenses.value,
+              tasks: tasks.value,
               settings: [{ id: "adminWaGroupLink", value: adminWaGroupLink.value }]
             };
           } else {
@@ -470,6 +471,7 @@
                 factories: Object.values(queueSnapshot.changes.factories || {}),
                 factoryBills: Object.values(queueSnapshot.changes.factoryBills || {}),
                 expenses: Object.values(queueSnapshot.changes.expenses || {}),
+                tasks: Object.values(queueSnapshot.changes.tasks || {}),
                 categories: queueSnapshot.changes.categories,
                 settings: Object.values(queueSnapshot.changes.settings || {})
               },
@@ -525,6 +527,9 @@
                 });
                 Object.keys(queueSnapshot.changes.expenses || {}).forEach(id => {
                   delete syncQueue.value.changes.expenses[id];
+                });
+                Object.keys(queueSnapshot.changes.tasks || {}).forEach(id => {
+                  delete syncQueue.value.changes.tasks[id];
                 });
                 Object.keys(queueSnapshot.changes.settings || {}).forEach(id => {
                   delete syncQueue.value.changes.settings[id];
