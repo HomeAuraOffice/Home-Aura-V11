@@ -297,6 +297,8 @@
               factories: {},
               factoryBills: {},
               expenses: {},
+              tasks: {},
+              notifications: {},
               categories: null,
               settings: {}
             },
@@ -307,7 +309,8 @@
               factories: [],
               factoryBills: [],
               expenses: [],
-              tasks: []
+              tasks: [],
+              notifications: []
             }
           };
         };
@@ -422,8 +425,7 @@
             const myU = users.value.find(u => u && u?.username === currentUser.value?.username);
             if (myU) {
               myU.lastActive = getBstIsoString();
-              syncQueue.value.changes.users = syncQueue.value.changes.users || {};
-              syncQueue.value.changes.users[myU.id] = true;
+              queueChange('users', myU);
             }
           }
           if (!appsScriptUrl.value) return;
@@ -456,6 +458,7 @@
               factoryBills: factoryBills.value,
               expenses: expenses.value,
               tasks: tasks.value,
+              notifications: notifications.value,
               settings: [{ id: "adminWaGroupLink", value: adminWaGroupLink.value }]
             };
           } else {
@@ -472,6 +475,7 @@
                 factoryBills: Object.values(queueSnapshot.changes.factoryBills || {}),
                 expenses: Object.values(queueSnapshot.changes.expenses || {}),
                 tasks: Object.values(queueSnapshot.changes.tasks || {}),
+                notifications: Object.values(queueSnapshot.changes.notifications || {}),
                 categories: queueSnapshot.changes.categories,
                 settings: Object.values(queueSnapshot.changes.settings || {})
               },
@@ -547,8 +551,8 @@
             } else {
               // Reset queue after full sync
               syncQueue.value = {
-                changes: { orders: {}, deletedOrders: {}, users: {}, factories: {}, factoryBills: {}, expenses: {}, categories: null, settings: {} },
-                deletes: { orders: [], deletedOrders: [], users: [], factories: [], factoryBills: [], expenses: [] }
+                changes: { orders: {}, deletedOrders: {}, users: {}, factories: {}, factoryBills: {}, expenses: {}, tasks: {}, notifications: {}, categories: null, settings: {} },
+                deletes: { orders: [], deletedOrders: [], users: [], factories: [], factoryBills: [], expenses: [], tasks: [], notifications: [] }
               };
             }
 
@@ -587,6 +591,9 @@
             const timeoutId = setTimeout(() => controller.abort(), 12000);
 
             const res = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ action: 'sync_read' }),
               signal: controller.signal
             });
             clearTimeout(timeoutId);
