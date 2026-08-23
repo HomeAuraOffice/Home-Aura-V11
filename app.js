@@ -368,6 +368,7 @@
         const isBackingUp = ref(false);
         const isPushing = ref(false);
         const isPulling = ref(false);
+        const isAuthenticating = ref(false);
         const isTestingSync = ref(false);
 
         // Helper: Stamp entity with ISO timestamp and author
@@ -1547,9 +1548,25 @@
         };
 
         // --- AUTHENTICATION ---
-        const handleLogin = () => {
+        const handleLogin = async () => {
           loginError.value = '';
-          const user = users.value.find(u => u && String(u?.username || '').trim().toLowerCase() === String(loginForm?.username || '').trim().toLowerCase() && String(u?.password || '').trim() === String(loginForm?.password || '').trim());
+          isAuthenticating.value = true;
+          
+          let user = users.value.find(u => u && String(u?.username || '').trim().toLowerCase() === String(loginForm?.username || '').trim().toLowerCase() && String(u?.password || '').trim() === String(loginForm?.password || '').trim());
+          
+          if (!user && appsScriptUrl.value) {
+            if (!isPulling.value) {
+              await syncFromGoogleSheets(false);
+            } else {
+              while (isPulling.value) {
+                await new Promise(r => setTimeout(r, 200));
+              }
+            }
+            user = users.value.find(u => u && String(u?.username || '').trim().toLowerCase() === String(loginForm?.username || '').trim().toLowerCase() && String(u?.password || '').trim() === String(loginForm?.password || '').trim());
+          }
+          
+          isAuthenticating.value = false;
+
           if (!user) {
             loginError.value = 'Invalid username or password.';
             return;
@@ -3325,11 +3342,7 @@
         };
 
         // --- SETTINGS AND DIAGNOSTICS ---
-        const saveAppsScriptUrl = () => {
-          localStorage.setItem('homeaura_apps_script_url', appsScriptUrl.value);
-          alert('Google Apps Script URL saved! Automatic background synchronization is active.');
-          triggerAutoSync(true);
-        };
+        const saveAppsScriptUrl = async () => { localStorage.setItem('homeaura_apps_script_url', appsScriptUrl.value); alert('Google Apps Script URL saved! Synchronizing database...'); await syncFromGoogleSheets(true); alert('Synchronization complete. You can now log in.'); };
 
                 const updateBackupFrequency = async () => {
           if (!appsScriptUrl.value) {
@@ -4385,6 +4398,7 @@ function backupSpreadsheet() {
           isPushing,
           isPulling,
           isTestingSync,
+          isAuthenticating,
           syncStatus,
           syncNotice,
           syncStatusMsg,
