@@ -285,6 +285,11 @@
               <button v-if="currentUser.role === 'admin'" @click="activeTab = 'settings'" :class="activeTab === 'settings' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-100 font-medium'" class="px-3.5 py-2.5 rounded-lg text-xs transition-all flex items-center gap-3 w-full text-left">
                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span v-show="!isSidebarCollapsed">Settings</span></button>
               
+              <button @click="activeTab = 'intake'" :class="activeTab === 'intake' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-100 font-medium'" class="px-3.5 py-2.5 rounded-lg text-xs transition-all flex items-center gap-3 w-full text-left">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span v-show="!isSidebarCollapsed">Order Registration Terminal</span></button>
+              <button @click="activeTab = 'my_orders'" :class="activeTab === 'my_orders' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-100 font-medium'" class="px-3.5 py-2.5 rounded-lg text-xs transition-all flex items-center gap-3 w-full text-left">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg><span v-show="!isSidebarCollapsed">My Submitted Logs ({{ myOrdersCount }})</span></button>
+
               <div class="my-2 border-t border-slate-200 dark:border-slate-800"></div>
               
               <button @click="activeTab = 'tasks'" :class="activeTab === 'tasks' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-100 font-medium'" class="px-3.5 py-2.5 rounded-lg text-xs transition-all flex items-center justify-between w-full text-left">
@@ -404,6 +409,7 @@
           <template v-if="(currentUser.role === 'admin' || currentUser.role === 'moderator' || currentUser.role === 'marketer')">
             <button @click="activeTab = 'dashboard'" :class="activeTab === 'dashboard' ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 font-semibold' : 'text-slate-600 dark:text-slate-300'" class="px-3 py-1.5 rounded-lg text-xs whitespace-nowrap">Dashboard</button>
             <button @click="activeTab = 'intake'" :class="activeTab === 'intake' ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 font-semibold' : 'text-slate-600 dark:text-slate-300'" class="px-3 py-1.5 rounded-lg text-xs whitespace-nowrap">New Order</button>
+            <button @click="activeTab = 'my_orders'" :class="activeTab === 'my_orders' ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 font-semibold' : 'text-slate-600 dark:text-slate-300'" class="px-3 py-1.5 rounded-lg text-xs whitespace-nowrap">My Logs</button>
             <button @click="activeTab = 'orders'" :class="activeTab === 'orders' ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 font-semibold' : 'text-slate-600 dark:text-slate-300'" class="px-3 py-1.5 rounded-lg text-xs whitespace-nowrap">Master Ledger</button>
             <button @click="activeTab = 'factories'" :class="activeTab === 'factories' ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 font-semibold' : 'text-slate-600 dark:text-slate-300'" class="px-3 py-1.5 rounded-lg text-xs whitespace-nowrap">Factories</button>
             <button v-if="currentUser.role === 'admin'" @click="activeTab = 'payables_audit'" :class="activeTab === 'payables_audit' ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-slate-600 dark:text-slate-300'" class="px-3 py-1.5 rounded-lg text-xs whitespace-nowrap">Payables Audit</button>
@@ -1640,7 +1646,7 @@
         </transition>
         <!-- ==================== SELLER: ORDER INTAKE & PARSER ==================== -->
         <transition name="pane-fade" mode="out-in">
-          <div v-if="currentUser.role === 'seller' && activeTab === 'intake'" key="seller-intake" class="space-y-6">
+          <div v-if="activeTab === 'intake'" key="seller-intake" class="space-y-6">
             
             <!-- Seller Personal Monthly Target Progress Indicator -->
             <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-3">
@@ -2000,7 +2006,7 @@ Price: 65000 tk, Del: 2500"
 
         <!-- ==================== SELLER: MY ENTRY ARCHIVE ==================== -->
         <transition name="pane-fade" mode="out-in">
-          <div v-if="currentUser.role === 'seller' && activeTab === 'my_orders'" key="seller-orders" class="space-y-4">
+          <div v-if="activeTab === 'my_orders'" key="seller-orders" class="space-y-4">
             
             <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
               <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100">My Submitted Order Logs</h2>
@@ -2929,7 +2935,13 @@ Price: 65000 tk, Del: 2500"
                 </div>
                 <div>
                   <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Password</label>
-                  <input v-model="modalData.user.password" type="password" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none" />
+                  <div class="relative">
+                    <input v-model="modalData.user.password" :type="modalData.showPassword ? 'text' : 'password'" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2 pr-10 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none" />
+                    <button type="button" @click="modalData.showPassword = !modalData.showPassword" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 rounded-md">
+                      <svg v-if="!modalData.showPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                      <svg v-if="modalData.showPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.978 9.978 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                    </button>
+                  </div>
                 </div>
               </div>
               <div>
