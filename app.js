@@ -15,9 +15,7 @@
         ];
 
         // --- SEEDING DEFAULT USERS ---
-        const defaultUsers = [
-          { id: 'u1', username: 'admin', password: 'changeme123', name: 'Master Admin', role: 'admin', active: true, target: 0 }
-        ];
+        const defaultUsers = [];
 
         // --- SEEDING DEFAULT FACTORIES ---
         const defaultFactories = [];
@@ -1553,17 +1551,16 @@
           loginError.value = '';
           isAuthenticating.value = true;
           
-          let user = users.value.find(u => u && String(u?.username || '').trim().toLowerCase() === String(loginForm?.username || '').trim().toLowerCase() && String(u?.password || '').trim() === String(loginForm?.password || '').trim());
+          let enteredUser = String(loginForm?.username || '').trim().toLowerCase();
+          let enteredPass = String(loginForm?.password || '').trim();
+          
+          let user = users.value.find(u => u && String(u.username || '').trim().toLowerCase() === enteredUser && String(u.password || '').trim() === enteredPass);
           
           if (!user && appsScriptUrl.value) {
-            if (!isPulling.value) {
-              await syncFromGoogleSheets(false);
-            } else {
-              while (isPulling.value) {
-                await new Promise(r => setTimeout(r, 200));
-              }
-            }
-            user = users.value.find(u => u && String(u?.username || '').trim().toLowerCase() === String(loginForm?.username || '').trim().toLowerCase() && String(u?.password || '').trim() === String(loginForm?.password || '').trim());
+            try {
+                await syncFromGoogleSheets(true);
+                user = users.value.find(u => u && String(u.username || '').trim().toLowerCase() === enteredUser && String(u.password || '').trim() === enteredPass);
+            } catch(e) {}
           }
           
           isAuthenticating.value = false;
@@ -1576,6 +1573,7 @@
             loginError.value = 'Account is suspended. Contact Administrator.';
             return;
           }
+          
           currentUser.value = user;
           localStorage.setItem('homeaura_session', JSON.stringify(user));
           activeTab.value = (user.role === 'admin' || user.role === 'marketer' || user.role === 'moderator') ? 'dashboard' : 'intake';
