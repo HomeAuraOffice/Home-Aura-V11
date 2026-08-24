@@ -143,7 +143,7 @@
         const LEGACY_BAD_LINK = 'https://chat.whatsapp.com/HomeAuraOfficialTeam';
 
         // Apps Script Endpoint URL
-        const appsScriptUrl = ref(localStorage.getItem('homeaura_apps_script_url') || 'https://script.google.com/macros/s/AKfycbzLixNthxgqReboKXMfkLJSAz1baSXPw69ed9Lf2WxJBKtCrUzeOUzqawMf_tbn-da74Q/exec');
+        const appsScriptUrl = ref(localStorage.getItem('homeaura_apps_script_url') || 'https://script.google.com/macros/s/AKfycbzNFz2FCseoi9W8G1jf3RC8suDw0OOOMCd7JTlTO3uYfXdhNUfv1-eytcwIYtmyO6gDsw/exec');
         const backupFrequency = ref(localStorage.getItem('homeaura_backup_frequency') || '6');
         let initialStoredWa = localStorage.getItem('homeaura_admin_wa');
         if (initialStoredWa && initialStoredWa.includes('HomeAuraOfficialTeam')) {
